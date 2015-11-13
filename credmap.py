@@ -111,9 +111,9 @@ XML_ELEMENTS = ("url", "name", "description", "login_url", "invalid_account",
                 "login_parameter", "login_parameter_type", "multiple_params",
                 "password_parameter", "password_parameter_type", "status",
                 "csrf_token_name", "csrf_url", "csrf_setcookie_regex",
-                "csrf_regex", "csrf_start", "csrf_end", "captcha_flag", "data",
+                "csrf_regex", "csrf_start", "csrf_end", "captcha_flag",
                 "multiple_params_url", "valid_user_header", "csrf_token",
-                "self.response_headers", "self.response_status",
+                "self.response_headers", "self.response_status", "data",
                 "email_exception", "login_redirect", "login_redirect_type")
 
 EXAMPLES = """
@@ -213,7 +213,7 @@ class Website(object):
 
             if header:
                 headers.update(dict([tuple(_.split("=", 1))
-                                     for _ in self.headers.split(";")]))
+                                     for _ in self.headers.split(";", 1)]))
 
             req = Request(self.url, self.data if data else None, headers)
             conn = urlopen(req)
@@ -642,7 +642,7 @@ def populate_site(site):
         if "type" in _.attrib:
             site_properties["%s_type" % _.tag] = _.attrib["type"]
 
-    if site_properties.multiple_params is not None:
+    if site_properties.multiple_params:
         for _ in xml_tree.iter('param'):
             site_properties.multiple_params.append(_.attrib)
 
