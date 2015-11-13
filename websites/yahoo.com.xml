@@ -1,0 +1,18 @@
+<properties>
+    <name value="Yahoo!" />
+    <description value="A search engine and web portal including directory, mail, news, finance, answers, and more." />
+    <login_url value="https://login.yahoo.com/config/login" />
+    <invalid_password value="Invalid ID or password." />
+    <invalid_account value="This ID is not yet taken." />
+	<inactive_account value="{&quot;status&quot;:&quot;redirect&quot;,&quot;url&quot;:&quot;https:\/\/edit." />
+    <valid_response_header value="SSL=" />
+    <headers value="X-Requested-With=XMLHttpRequest;Referer=https://login.yahoo.com/config/login" />
+    <username_or_email value="username" />
+    <email_exception value="@yahoo\." />
+    <login_parameter value="username" />
+    <password_parameter value="passwd" />
+    <csrf_token_name value="_crumb" />
+    <csrf_url value="https://login.yahoo.com/config/login" />
+    <csrf_regex value="name=&quot;_crumb&quot;\stype=&quot;hidden&quot;\svalue=&quot;(?P&lt;token&gt;.{11})&quot;&gt;" />
+    <data value="countrycode=&amp;username=&amp;passwd=&amp;signin=&amp;_crumb=&amp;_format=json&amp;_seqid=3&amp;otp_channel=&amp;_loadtpl=1" />
+</properties>

@@ -1,0 +1,16 @@
+<properties>
+    <name value="Groupon" />
+    <description value="A global e-commerce marketplace connecting subscribers with local merchants by offering activities, travel, goods and services." />
+    <login_url value="https://www.groupon.com/login?ref=https%3A%2F%2Fwww.groupon.com%2F" />
+    <valid_password value="Sign Out" />
+    <invalid_password value="Incorrect login. Try again or" />
+    <valid_response_header value="just_logged_in=true" />
+    <headers value="Referer=https://www.groupon.com/login" />
+    <username_or_email value="email" />
+    <login_parameter value="email" />
+    <password_parameter value="password" />
+    <csrf_token_name value="_csrf" />
+    <csrf_url value="https://www.groupon.com/login" />
+    <csrf_regex value="name=&quot;_csrf&quot;\svalue=&quot;(?P&lt;token&gt;[^&quot;]*)&quot;" />
+    <data value="_csrf=&amp;email=&amp;password=&amp;password-toggle=1" />
+</properties>

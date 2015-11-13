@@ -1,0 +1,19 @@
+<properties>
+    <name value="Pinterest" />
+    <description value="A photo sharing social network where users can upload, save, sort, and manage images known as pins. " />
+    <login_url value="https://www.pinterest.com/resource/UserSessionResource/create/" />
+    <valid_password value="&quot;token_type&quot;:" />
+    <invalid_password value="The password you entered is incorrect." />
+    <invalid_account value="The email you entered does not belong to any account." />
+    <invalid_http_status value="401" />
+    <headers value="Referer=https://www.pinterest.com;X-Pinterest-AppState=active;X-CSRFToken=;X-NEW-APP=1;X-APP-VERSION=98efe14;X-Requested-With=XMLHttpRequest" />
+    <username_or_email value="email" />
+    <login_parameter value="username_or_email" type="json" />
+    <password_parameter value="password" type="json" />
+    <csrf_token_name value="X-CSRFToken" />
+    <csrf_url value="https://www.pinterest.com/" />
+    <csrf_setcookie_regex value="csrftoken=(?P&lt;token&gt;.{32})" />
+    <captcha_flag value="" />
+    <data value="source_url=/&amp;data={&quot;options&quot;:{&quot;username_or_email&quot;:&quot;&quot;,&quot;password&quot;:&quot;&quot;},&quot;context&quot;:{}}&amp;module_path=App&gt;ModalManager&gt;Modal&gt;PlainSignupModal&gt;SignupForm&gt;UserRegister(next=/,+wall_class=grayWall,+container=plain_signup_modal,+unified_auth=undefined,+is_login_form=true,+show_personalize_field=null,+auto_follow=null,+register=true)null" />
+</properties>
+

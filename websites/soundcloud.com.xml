@@ -1,0 +1,16 @@
+<properties>
+    <name value="SoundCloud" />
+    <description value="A global online audio distribution platform where users can upload, record, promote, and share their originally-created sounds." />
+    <login_url value="https://soundcloud.com/connect/login" />
+    <invalid_http_status value="422" />
+    <invalid_password value="" />
+    <valid_password value="This popup should automatically close in a few seconds" />
+    <username_or_email value="email" />
+    <login_parameter value="username" />
+    <password_parameter value="password" />
+    <csrf_token_name value="client_id" />
+    <csrf_url value="https://a-v2.sndcdn.com/assets/app-90da6-dcbb0ac.js" />
+    <csrf_regex value="query:{client_id:&quot;(?P&lt;token&gt;.{32})&quot;}" />
+    <captcha_flag value="recaptcha_input_area" />
+    <data value="client_id=&amp;redirect_uri=https%3A%2F%2Fsoundcloud.com%2Fsoundcloud-callback.html&amp;response_type=token&amp;scope=non-expiring+fast-connect+purchase+upload&amp;display=next&amp;username=&amp;password=&amp;remember_me=on" />
+</properties>

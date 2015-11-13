@@ -1,0 +1,15 @@
+<properties>
+    <name value="Instagram" />
+    <description value="Social networking service to take pictures and videos, and share them over social networking platforms" />
+    <login_url value="https://instagram.com/accounts/login/ajax/" />
+    <valid_password value="{&quot;status&quot;:&quot;ok&quot;,&quot;authenticated&quot;:true}" />
+    <invalid_password value="{&quot;status&quot;:&quot;ok&quot;,&quot;authenticated&quot;:false}" />
+    <headers value="Referer=https://instagram.com/;X-Instagram-AJAX=1;X-CSRFToken=;X-Requested-With=XMLHttpRequest" />
+    <username_or_email value="username" />
+    <login_parameter value="username" />
+    <password_parameter value="password" />
+    <csrf_token_name value="X-CSRFToken" />
+    <csrf_url value="https://instagram.com/" />
+    <csrf_regex value="&quot;csrf_token&quot;:&quot;(?P&lt;token&gt;.{32})&quot;" />
+    <data value="username=&amp;password=" />
+</properties>
