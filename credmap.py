@@ -630,7 +630,7 @@ def populate_site(site):
 
     for _ in xml_tree:
         if _.tag == "multiple_params":
-            site_properties["multiple_params"] = []
+            site_properties["multiple_params"] = True
             site_properties["multiple_params_url"] = _.attrib["value"]
             continue
         if _.tag == "custom_search":
@@ -643,6 +643,7 @@ def populate_site(site):
             site_properties["%s_type" % _.tag] = _.attrib["type"]
 
     if site_properties.multiple_params:
+        site_properties["multiple_params"] = []
         for _ in xml_tree.iter('param'):
             site_properties.multiple_params.append(_.attrib)
 
