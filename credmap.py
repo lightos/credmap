@@ -67,8 +67,10 @@ GR = '\033[37m'
 # Information levels
 PLUS = "[%s+%s]" % (("", "") if WINDOWS else (G, W))
 INFO = "[%si%s]" % (("", "") if WINDOWS else (C, W))
+TEST = "[%s*%s]" % (("", "") if WINDOWS else (B, W))
 WARN = "[%s!%s] %sWarning%s:" % (("", "", "", "") if WINDOWS else (O, W, O, W))
 ERROR = "[%sx%s] %sERROR%s:" % (("", "", "", "") if WINDOWS else (R, W, R, W))
+DEBUG = "[%sd%s] %sDEBUG%s:" % (("", "", "", "") if WINDOWS else (P, W, P, W))
 
 BANNER_PASSWORDS = ("123456", "HUNTER2", "LOVE",
                     "SECRET", "ABC123", "GOD", "SEX")
@@ -118,9 +120,9 @@ XML_ELEMENTS = ("url", "name", "description", "login_url", "invalid_account",
 EXAMPLES = """
 Examples:
 ./credmap.py --username janedoe --email janedoe@email.com
-./credmap.py -u johndoe -e johndoe@email.com --exclude "github.com,twitter.com"
-./credmap.py -u johndoe -p abc123 --only "linkedin.com, facebook.com"
-./credmap.py -e janedoe@example.com --proxy "https://127.0.0.1:8080"
+./credmap.py -u johndoe -e johndoe@email.com --exclude "github.com, live.com"
+./credmap.py -u johndoe -p abc123 -vvv --only "linkedin.com, facebook.com"
+./credmap.py -e janedoe@example.com --verbose --proxy "https://127.0.0.1:8080"
 ./credmap.py --list
 """
 
@@ -214,6 +216,13 @@ class Website(object):
                 headers.update(dict([tuple(_.split("=", 1))
                                      for _ in self.headers.split(";")]))
 
+            if args.verbose >= 2:
+                print("%s REQUEST\nURL: %s\n%sHeaders: %s\n" % (DEBUG, self.url,
+                                                              "DATA: %s\n" %
+                                                              self.data if data
+                                                              else "",
+                                                              headers))
+
             req = Request(self.url, self.data if data else None, headers)
             conn = urlopen(req)
 
@@ -239,20 +248,24 @@ class Website(object):
                     print("%s message '%s'." % (ERROR, error.message))
                 if hasattr(error, "code"):
                     print("%s error code '%d'." % (ERROR, error.code))
-                if hasattr(error, "info"):
-                    print("%s response headers '%s'." % (ERROR, error.info()))
 
         # NEED TO CLEAN THIS WHOLE PART UP
         self.status["status"] = 1 if conn else 0
         self.status["message"] = (conn.msg if conn and hasattr(conn, "msg")
                                   else error.msg if error and
                                   hasattr(error, "msg") else "Unknown error!")
-        self.response_headers = (conn.info if conn and hasattr(conn, "info")
-                                 else error.info if error and
+        self.response_headers = (conn.info() if conn and hasattr(conn, "info")
+                                 else error.info() if error and
                                  hasattr(error, "info") else "Unknown info!")
         self.response_status = (conn.code if conn and hasattr(conn, "code")
                                 else error.code if error and
                                 hasattr(error, "code") else "Unknown code!")
+
+        if args.verbose >= 2:
+            print("%s RESPONSE\n%s" % (DEBUG, self.response_headers))
+
+        if args.verbose >= 3:
+            print("%s HTML\n%s" % (DEBUG, page))
 
         return page
 
@@ -299,9 +312,8 @@ class Website(object):
                                   self.csrf_regex else str(cookie_handler),
                                   re.I)
                 if match:
-                    self.csrf_token = (match.group("token")
-                                       if match.groupdict().has_key("token")
-                                       else match.group(1))
+                    self.csrf_token = (match.group("token") if "token" in
+                                       match.groupdict() else match.group(1))
                 else:
                     self.status = {"status": 0, "msg": "No token"}
             else:
@@ -347,7 +359,7 @@ class Website(object):
                 return
 
             for _ in self.multiple_params:
-                regex = (_["regex"] if _.has_key("regex") else
+                regex = (_["regex"] if "regex" in _ else
                          r"<\w+\s*(\s*\w+\s*=\"[^\"]*\")*\s*name="
                          r"\"%s\"\s*(\s*\w+\s*=\"[^\"]*\")*\s*/?>"
                          % _["value"])
@@ -361,15 +373,15 @@ class Website(object):
 
                 if "regex" in _:
                     value = (match.group("value")
-                             if match.groupdict().has_key("value")
-                             else match.group(1))
+                             if "value" in match.groupdict() else
+                             match.group(1))
                 elif "value" in _:
                     for attrib in match.groups():
                         attrib = str(attrib).strip().split("=", 1)
                         if attrib[0] == "value":
                             value = attrib[1].strip("\"")
 
-                if not _.has_key("type"):
+                if "type" not in _:
                     _["type"] = "data"
 
                 if _["type"] == "data" and self.data:
@@ -429,7 +441,7 @@ class Website(object):
             if self.login_redirect_type == "regex":
                 self.url = re.search(self.login_redirect, login_response)
                 self.url = (self.url.group("URL")
-                            if self.url.groupdict().has_key("URL")
+                            if "URL" in self.url.groupdict()
                             else self.url.group(1))
             else:
                 self.url = self.login_redirect
@@ -518,15 +530,15 @@ class Website(object):
                       % INFO)
             return False
         # User exists, but invalid password string in login response
-        elif (self.invalid_password and self.invalid_account
-              and self.invalid_password in login_response):
+        elif (self.invalid_password and self.invalid_account and
+              self.invalid_password in login_response):
             if args.verbose:
                 print("%s The user exists, but the password is incorrect.\n"
                       % INFO)
             return False
         # Invalid password string in login response
-        elif (self.invalid_password and not self.invalid_account
-              and self.invalid_password in login_response):
+        elif (self.invalid_password and not self.invalid_account and
+              self.invalid_password in login_response):
             if args.verbose:
                 print("%s The provided credentials are incorrect "
                       "or the account doesn't exist.\n" % INFO)
@@ -777,7 +789,7 @@ def main():
                        color(target.username_or_email)))
             continue
 
-        print("%s Testing \"%s\"" % (INFO, color(target.name, BW)))
+        print("%s Testing \"%s\"" % (TEST, color(target.name, BW)))
 
         if not target.user_agent:
             target.user_agent = args.user_agent
