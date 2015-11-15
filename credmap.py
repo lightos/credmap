@@ -217,11 +217,12 @@ class Website(object):
                                      for _ in self.headers.split(";")]))
 
             if args.verbose >= 2:
-                print("%s REQUEST\nURL: %s\n%sHeaders: %s\n" % (DEBUG, self.url,
-                                                              "DATA: %s\n" %
-                                                              self.data if data
-                                                              else "",
-                                                              headers))
+                print("%s REQUEST\nURL: %s\n%sHeaders: %s\n" % (DEBUG,
+                                                                self.url,
+                                                                "DATA: %s\n" %
+                                                                self.data
+                                                                if data else
+                                                                "", headers))
 
             req = Request(self.url, self.data if data else None, headers)
             conn = urlopen(req)
