@@ -212,7 +212,7 @@ class Website(object):
 
             if header:
                 headers.update(dict([tuple(_.split("=", 1))
-                                     for _ in self.headers.split(";", 1)]))
+                                     for _ in self.headers.split(";")]))
 
             req = Request(self.url, self.data if data else None, headers)
             conn = urlopen(req)

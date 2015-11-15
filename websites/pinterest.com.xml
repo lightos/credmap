@@ -12,7 +12,7 @@
     <password_parameter value="password" type="json" />
     <csrf_token_name value="X-CSRFToken" />
     <csrf_url value="https://www.pinterest.com/" />
-    <csrf_setcookie_regex value="csrftoken=(?P&lt;token&gt;.{32})" />
+    <csrf_setcookie value="csrftoken=(?P&lt;token&gt;.{32})" />
     <captcha_flag value="" />
     <data value="source_url=/&amp;data={&quot;options&quot;:{&quot;username_or_email&quot;:&quot;&quot;,&quot;password&quot;:&quot;&quot;},&quot;context&quot;:{}}&amp;module_path=App&gt;ModalManager&gt;Modal&gt;PlainSignupModal&gt;SignupForm&gt;UserRegister(next=/,+wall_class=grayWall,+container=plain_signup_modal,+unified_auth=undefined,+is_login_form=true,+show_personalize_field=null,+auto_follow=null,+register=true)null" />
 </properties>
