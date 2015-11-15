@@ -343,8 +343,8 @@ class Website(object):
             Parameter format can be json or normal POST data.
             """
             if param_format == "json":
-                return re.sub(r"(?P<json_replacement>\"%s\"\s*:\s*\"\s*)\"" %
-                              param, "\\1%s\"" % value, string)
+                return re.sub(r"(?P<json_replacement>\"%s\"\s*:\s*)\"\s*\"" %
+                              param, "\\1\"%s\"" % value, string)
             else:
                 return string.replace("%s=" % param, "%s=%s" % (param, value))
 
