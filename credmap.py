@@ -30,14 +30,16 @@ import cookielib
 
 from time import strftime
 from urllib import urlencode
+from sys import stdout as sys_stdout
 from urllib2 import urlopen, ProxyHandler, Request, install_opener, HTTPHandler
 from urllib2 import build_opener, quote, HTTPCookieProcessor, HTTPSHandler
 from urlparse import urlsplit, urlunsplit, parse_qsl
+from subprocess import Popen, PIPE
 from optparse import OptionParser
 from getpass import getpass
 from random import sample
 from os import listdir, name
-from os.path import isfile, join
+from os.path import isfile, join, dirname, exists
 
 
 NAME = "credmap"
@@ -65,6 +67,7 @@ C = '\033[36m'
 GR = '\033[37m'
 
 # Information levels
+ASK = "[%s?%s]" % (("", "") if WINDOWS else (B, W))
 PLUS = "[%s+%s]" % (("", "") if WINDOWS else (G, W))
 INFO = "[%si%s]" % (("", "") if WINDOWS else (C, W))
 TEST = "[%s*%s]" % (("", "") if WINDOWS else (B, W))
@@ -553,9 +556,134 @@ class Website(object):
             return False
 
 
+def get_revision():
+    """
+    Returns abbreviated commit hash number as retrieved with:
+    "git rev-parse --short HEAD".
+    """
+
+    retval = None
+    filepath = None
+    _ = dirname(__file__)
+
+    while True:
+        filepath = join(_, ".git", "HEAD")
+        if exists(filepath):
+            break
+        else:
+            filepath = None
+            if _ == dirname(_):
+                break
+            else:
+                _ = dirname(_)
+
+    while True:
+        if filepath and isfile(filepath):
+            with open(filepath, "r") as f:
+                content = f.read()
+                filepath = None
+                if content.startswith("ref: "):
+                    filepath = join(_, ".git", content.replace("ref: ", "")
+                                    ).strip()
+                else:
+                    match = re.match(r"(?i)[0-9a-f]{32}", content)
+                    retval = match.group(0) if match else None
+                    break
+        else:
+            break
+
+    if not retval:
+        process = Popen("git rev-parse --verify HEAD", shell=True,
+                        stdout=PIPE, stderr=PIPE)
+        stdout, _ = process.communicate()
+        match = re.search(r"(?i)[0-9a-f]{32}", stdout or "")
+        retval = match.group(0) if match else None
+
+    return retval[:7] if retval else None
+
+
+def check_revision():
+    """
+    Adapts the default version string and banner to
+    use the revision number.
+    """
+
+    global BANNER
+    global VERSION
+
+    revision = get_revision()
+
+    if revision:
+        _ = VERSION
+        VERSION = "%s-%s" % (VERSION, revision)
+        BANNER = BANNER.replace(_, VERSION)
+
+
+def update():
+    """
+    Updates the program via git pull.
+    """
+
+    print("%s Checking for updates..." % INFO)
+
+    process = Popen("git pull %s HEAD" % GIT_REPOSITORY, shell=True,
+                    stdout=PIPE, stderr=PIPE)
+    stdout, stderr = process.communicate()
+    success = not process.returncode
+
+    if success:
+        updated = "Already" not in stdout
+        process = Popen("git rev-parse --verify HEAD", shell=True,
+                        stdout=PIPE, stderr=PIPE)
+        stdout, _ = process.communicate()
+        revision = (stdout[:7] if stdout and
+                    re.search(r"(?i)[0-9a-f]{32}", stdout) else "-")
+        print("%s the latest revision '%s'." %
+              ("%s Already at" % INFO if not updated else
+               "%s Updated to" % PLUS, revision))
+    else:
+        print("%s Problem occurred while updating program.\n" % WARN)
+
+        _ = re.search(r"(?P<error>Your\slocal\schanges\sto\sthe\sfollowing\s"
+                      r"files\swould\sbe\soverwritten\sby\smerge:"
+                      r"(?:\n\t[^\n]+)*)", stderr)
+        if _:
+            def question():
+                print("\n%s Would you like to overwrite your changes and set "
+                      "your local copy to the latest commit?" % ASK)
+                sys_stdout.write("%s ALL your changes will be deleted [Y/n]: "
+                                 % WARN)
+                _ = raw_input()
+
+                if not _:
+                    _ == "y"
+
+                if _.lower() == "n":
+                    exit()
+                elif _.lower() == "y":
+                    return
+                else:
+                    print("%s Did not understand your answer! Try again." %
+                          ERROR)
+                    question()
+
+            print("%s" % _.group("error"))
+
+            question()
+
+            process = Popen("git reset --hard", shell=True,
+                            stdout=PIPE, stderr=PIPE)
+            stdout, _ = process.communicate()
+
+            update()
+        else:
+            print("%s Please make sure that you have "
+                  "a 'git' package installed.", INFO)
+
+
 def parse_args():
     """
-    Parses command line arguments.
+    Parses the command line arguments.
     """
     # Override epilog formatting
     OptionParser.format_epilog = lambda self, formatter: self.epilog
@@ -595,6 +723,9 @@ def parse_args():
     parser.add_option("--list", action="store_true", dest="list",
                       help="list available sites to test with")
 
+    parser.add_option("--update", dest="update", action="store_true",
+                      help="update from the official git repository")
+
     parser.formatter.store_option_strings(parser)
     parser.formatter.store_option_strings = lambda _: None
 
@@ -609,7 +740,7 @@ def parse_args():
 
     args = parser.parse_args()[0]
 
-    if not any((args.username, args.email, args.list)):
+    if not any((args.username, args.email, args.update, args.list)):
         parser.error("Required argument is missing. Use '-h' for help.")
 
     return args
@@ -702,11 +833,17 @@ def main():
     login_sucessful = []
     login_failed = []
 
+    check_revision()
+
     print("%s\n\n%s %s (%s)\n" % (
         BANNER % tuple([color(_) for _ in BANNER_PASSWORDS]),
         NAME, VERSION, URL))
 
     args = parse_args()
+
+    if args.update:
+        update()
+        exit()
 
     if args.list:
         sites = list_sites()
@@ -823,4 +960,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("%s Ctrl-C pressed." % INFO)
+        print("\n%s Ctrl-C pressed." % INFO)
