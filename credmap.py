@@ -106,15 +106,14 @@ args = None
 XML_ELEMENTS = ("url", "name", "description", "login_url", "invalid_account",
                 "inactive_account", "valid_password", "invalid_password",
                 "valid_response_header", "valid_response_header_type",
-                "valid_response_header", "invalid_http_status", "headers",
+                "response_headers", "invalid_http_status", "headers", "data",
                 "cookies", "user_agent", "username_or_email", "custom_search",
                 "login_parameter", "login_parameter_type", "multiple_params",
                 "password_parameter", "password_parameter_type", "status",
-                "csrf_token_name", "csrf_url", "csrf_setcookie_regex",
-                "csrf_regex", "csrf_start", "csrf_end", "captcha_flag",
+                "csrf_token_name", "csrf_url", "csrf_setcookie", "csrf_start",
+                "csrf_regex", "csrf_end", "captcha_flag", "email_exception",
                 "multiple_params_url", "valid_user_header", "csrf_token",
-                "self.response_headers", "self.response_status", "data",
-                "email_exception", "login_redirect", "login_redirect_type")
+                "response_status", "login_redirect", "login_redirect_type")
 
 EXAMPLES = """
 Examples:
@@ -294,11 +293,11 @@ class Website(object):
                           "while fetching token!\n" % ERROR)
                 return
 
-            if self.csrf_regex or self.csrf_setcookie_regex:
-                match = re.search(self.csrf_regex if self.csrf_regex
-                                  else self.csrf_setcookie_regex,
-                                  csrf_response if self.csrf_regex
-                                  else str(cookie_handler), re.I)
+            if self.csrf_regex or self.csrf_setcookie:
+                match = re.search(self.csrf_regex if self.csrf_regex else
+                                  self.csrf_setcookie, csrf_response if
+                                  self.csrf_regex else str(cookie_handler),
+                                  re.I)
                 if match:
                     self.csrf_token = (match.group("token")
                                        if match.groupdict().has_key("token")
