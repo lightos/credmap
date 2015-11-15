@@ -2,8 +2,8 @@
     <name value="Yahoo!" />
     <description value="A search engine and web portal including directory, mail, news, finance, answers, and more." />
     <login_url value="https://login.yahoo.com/config/login" />
-    <invalid_password value="Invalid ID or password." />
-    <invalid_account value="This ID is not yet taken." />
+    <invalid_password value="{&quot;status&quot;:&quot;error&quot;,&quot;code&quot;:&quot;1212&quot;" />
+    <invalid_account value="{&quot;status&quot;:&quot;error&quot;,&quot;code&quot;:&quot;1235&quot;" />
 	<inactive_account value="{&quot;status&quot;:&quot;redirect&quot;,&quot;url&quot;:&quot;https:\/\/edit." />
     <valid_response_header value="SSL=" />
     <headers value="X-Requested-With=XMLHttpRequest;Referer=https://login.yahoo.com/config/login" />
