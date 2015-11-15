@@ -4,6 +4,7 @@
     <login_url value="https://imgur.com/signin?minimal" />
     <valid_password value="window.top.location = window.parent.document.referrer + &apos;?&apos;;" />
     <invalid_password value="Your login information was incorrect" />
+	<captcha_flag value="Please fill out a captcha." />
     <valid_user_header value="IMGURSESSION" />
     <username_or_email value="both" />
     <login_parameter value="username" />
