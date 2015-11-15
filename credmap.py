@@ -651,7 +651,7 @@ def populate_site(site):
 
     if not match:
         print("%s unable to read URL for login in XML file for \"%s\". "
-              "Skipping site..." % (ERROR, color(site_properties.name, BW)))
+              "Skipping site...\n" % (ERROR, color(site_properties.name, BW)))
         return
 
     if args.safe_urls and match.group("type").upper() != PROXY_TYPE.HTTPS:
