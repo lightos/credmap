@@ -3,7 +3,7 @@
     <description value="Social networking service to send and read short messages" />
     <login_url value="https://twitter.com/sessions" />
     <valid_password value="action=&quot;/logout&quot;" />
-    <invalid_password value="The username and password you entered did not match our records." />
+    <invalid_password value="LoginForm js-front-signin" />
     <username_or_email value="both" />
     <login_parameter value="session[username_or_email]" />
     <password_parameter value="session[password]" />
