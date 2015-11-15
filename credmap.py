@@ -651,12 +651,12 @@ def update():
             def question():
                 print("\n%s Would you like to overwrite your changes and set "
                       "your local copy to the latest commit?" % ASK)
-                sys_stdout.write("%s ALL your changes will be deleted [Y/n]: "
-                                 % WARN)
+                sys_stdout.write("%s ALL of your local changes will be deleted"
+                                 " [Y/n]: " % WARN)
                 _ = raw_input()
 
                 if not _:
-                    _ == "y"
+                    _ = "y"
 
                 if _.lower() == "n":
                     exit()
@@ -674,6 +674,14 @@ def update():
             process = Popen("git reset --hard", shell=True,
                             stdout=PIPE, stderr=PIPE)
             stdout, _ = process.communicate()
+
+            if "HEAD is now at" in stdout:
+                print("\n%s Local copy reset to current git branch." % INFO)
+                print("%s Attemping to run update again..." % INFO)
+            else:
+                print("%s Unable to reset local copy to current git branch." %
+                      WARN)
+                exit()
 
             update()
         else:
