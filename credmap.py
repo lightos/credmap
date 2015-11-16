@@ -28,7 +28,7 @@ import re
 import xml.etree.ElementTree
 import cookielib
 
-from time import strftime
+from time import strftime, time
 from urllib import urlencode
 from sys import stdout as sys_stdout
 from urllib2 import urlopen, ProxyHandler, Request, install_opener, HTTPHandler
@@ -118,7 +118,8 @@ XML_ELEMENTS = ("url", "name", "description", "login_url", "invalid_account",
                 "csrf_token_name", "csrf_url", "csrf_setcookie", "csrf_start",
                 "csrf_regex", "csrf_end", "captcha_flag", "email_exception",
                 "multiple_params_url", "valid_user_header", "csrf_token",
-                "response_status", "login_redirect", "login_redirect_type")
+                "response_status", "login_redirect", "login_redirect_type",
+                "time_parameter")
 
 EXAMPLES = """
 Examples:
@@ -371,7 +372,7 @@ class Website(object):
 
                 if not match:
                     if args.verbose:
-                        print("%s match for \"%s\" was not found!"
+                        print("%s match for token \"%s\" was not found!"
                               % (WARN, color(_["value"])))
                     continue
 
@@ -406,6 +407,16 @@ class Website(object):
             login = credentials.username
 
         # need to implement support for GET logins lulz
+
+        if self.time_parameter:
+            if "type" not in self.time_parameter:
+                self.time_parameter["type"] = "epoch"
+
+            if self.time_parameter["type"] == "epoch":
+                if self.data:
+                    self.data = replace_param(self.data,
+                                              self.time_parameter["value"],
+                                              time())
 
         if self.data:
             self.data = replace_param(self.data, self.login_parameter,
@@ -787,6 +798,10 @@ def populate_site(site):
         if _.tag == "custom_search":
             site_properties["custom_search"] = {"regex": _.attrib["regex"],
                                                 "value": _.attrib["value"]}
+            continue
+        if _.tag == "time_parameter":
+            site_properties["time_parameter"] = {"type": _.attrib["type"],
+                                                 "value": _.attrib["value"]}
             continue
         if "value" in _.attrib:
             site_properties[_.tag] = _.attrib["value"]
