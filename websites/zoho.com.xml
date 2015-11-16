@@ -1,0 +1,15 @@
+<properties>
+    <name value="Zoho" />
+    <description value="Online Office Suite and SaaS Applications for Businesses." />
+    <login_url value="https://accounts.zoho.com/login" />
+    <valid_password value="showsuccess('https\x3A\x2F\x2Faccounts.zoho.com\x2Fu\x2Fh'" />
+    <invalid_password value="Invalid\x20password" />
+    <invalid_account value="No\x20such\x20account" />
+    <username_or_email value="email" />
+    <login_parameter value="LOGIN_ID" />
+    <password_parameter value="PASSWORD" />
+    <csrf_token_name value="iamcsrcoo" />
+    <csrf_url value="https://accounts.zoho.com/login" />
+    <csrf_regex value="iamcsrcoo&quot;[^&quot;]+hiddenField\.setAttribute\(&quot;value&quot;, &quot;(?P&lt;token&gt;[0-9a-f-]+)" />
+    <data value="LOGIN_ID=&amp;PASSWORD=&amp;IS_AJAX=true&amp;iamcsrcoo=" />
+</properties>
