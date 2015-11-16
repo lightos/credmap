@@ -796,7 +796,9 @@ def populate_site(site):
     if site_properties.multiple_params:
         site_properties["multiple_params"] = []
         for _ in xml_tree.iter('param'):
-            site_properties.multiple_params.append(_.attrib)
+            _ = {k: v for k, v in _.attrib.items() if v}
+            if _:
+                site_properties.multiple_params.append(_)
 
     match = re.match(r"(?P<type>[^:]+)://[^.]+(\.\w+)*",
                      site_properties.login_url, re.I)
