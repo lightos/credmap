@@ -110,7 +110,7 @@ class Website(object):
                 page = page or error.read()
 
             if (hasattr(error, "code") and self.invalid_http_status and
-                    error.code == int(self.invalid_http_status)):
+                    error.code == int(self.invalid_http_status["value"])):
                 pass
             elif self.verbose:
                 if hasattr(error, "msg"):
@@ -344,28 +344,26 @@ class Website(object):
 
         # If invalid credentials http status code is returned
         if (self.invalid_http_status and self.response_status and
-                int(self.invalid_http_status) == int(self.response_status)):
+                int(self.invalid_http_status["value"]) ==
+                int(self.response_status)):
             if self.verbose:
-                print("%s Credentials were incorrect.\n" % INFO)
+                print("%s %s\n" % (INFO, self.invalid_http_status["msg"] if
+                                   self.invalid_http_status["msg"] else
+                                   "Credentials were incorrect."))
             return False
         # If captcha flag is set and found in login response
-        if self.captcha_flag and self.captcha_flag in login_response:
+        elif self.captcha_flag and self.captcha_flag in login_response:
             if self.verbose:
                 print("%s captcha detected! Skipping to next site...\n" % WARN)
             return False
         # If custom search is set and found in response
-        if self.custom_search and search(self.custom_search['regex'],
-                                         login_response):
+        elif self.custom_search and search(self.custom_search['regex'],
+                                           login_response):
             if self.verbose:
                 print("%s %s\n" % (INFO, self.custom_search["value"]))
             return False
         # Valid password string in response
-        if self.valid_password and self.valid_password in login_response:
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
-            return True
-        # Valid response header in Cookies
-        elif (self.valid_response_header and self.valid_response_header
-              in str(cookie_handler)):
+        elif self.valid_password and self.valid_password in login_response:
             print("%s Credentials worked! Successfully logged in.\n" % PLUS)
             return True
         # Valid response header type REGEX
@@ -428,6 +426,4 @@ class Website(object):
         else:
             if self.verbose:
                 print("%s Unable to login! Skipping to next site...\n" % WARN)
-                # if verbose 2
-                # print "this happens with a response that isn't handled"
             return False

@@ -91,7 +91,6 @@ Examples:
 ./credmap.py --list
 """
 
-args = None
 
 def print(*args, **kwargs):
     """
@@ -320,7 +319,7 @@ def list_sites(extension=False):
             for _ in listdir(SITES_DIR) if isfile(join(SITES_DIR, _))]
 
 
-def populate_site(site):
+def populate_site(site, args):
     """
     Parse sites in XML files and return objects.
     """
@@ -336,16 +335,20 @@ def populate_site(site):
 
     for _ in xml_tree:
         if _.tag == "multiple_params":
-            site_properties["multiple_params"] = True
-            site_properties["multiple_params_url"] = _.attrib["value"]
+            site_properties.multiple_params = True
+            site_properties.multiple_params_url = _.attrib["value"]
             continue
         if _.tag == "custom_search":
-            site_properties["custom_search"] = {"regex": _.attrib["regex"],
-                                                "value": _.attrib["value"]}
+            site_properties.custom_search = {"regex": _.attrib["regex"],
+                                             "value": _.attrib["value"]}
             continue
         if _.tag == "time_parameter":
-            site_properties["time_parameter"] = {"type": _.attrib["type"],
-                                                 "value": _.attrib["value"]}
+            site_properties.time_parameter = {"type": _.attrib["type"],
+                                              "value": _.attrib["value"]}
+            continue
+        if _.tag == "invalid_http_status":
+            site_properties.invalid_http_status = {"msg": _.attrib["msg"],
+                                                   "value": _.attrib["value"]}
             continue
         if "value" in _.attrib:
             site_properties[_.tag] = _.attrib["value"]
@@ -353,7 +356,7 @@ def populate_site(site):
             site_properties["%s_type" % _.tag] = _.attrib["type"]
 
     if site_properties.multiple_params:
-        site_properties["multiple_params"] = []
+        site_properties.multiple_params = []
         for _ in xml_tree.iter('param'):
             _ = {k: v for k, v in _.attrib.items() if v}
             if _:
@@ -469,7 +472,7 @@ def main():
     print("%s Starting tests at: \"%s\"\n" % (INFO, color(strftime("%X"), BW)))
 
     for site in sites:
-        _ = populate_site(site)
+        _ = populate_site(site, args)
         if not _:
             continue
         target = Website(_, {"verbose": args.verbose})
