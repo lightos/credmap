@@ -25,22 +25,23 @@ SOFTWARE.
 from __future__ import print_function
 
 import re
-import xml.etree.ElementTree
-import cookielib
 
-from time import strftime, time
-from urllib import urlencode
+from time import strftime
+from xml.etree.ElementTree import parse
 from sys import stdout as sys_stdout
-from urllib2 import urlopen, ProxyHandler, Request, install_opener, HTTPHandler
-from urllib2 import build_opener, quote, HTTPCookieProcessor, HTTPSHandler
-from urlparse import urlsplit, urlunsplit, parse_qsl
 from subprocess import Popen, PIPE
 from optparse import OptionParser
 from getpass import getpass
 from random import sample
-from os import listdir, name
+from os import listdir
 from os.path import isfile, join, dirname, exists
+from urllib2 import build_opener, install_opener, ProxyHandler
+from urllib2 import HTTPCookieProcessor, HTTPHandler, HTTPSHandler
 
+from .lib.website import Website
+from .lib.common import color, cookie_handler
+from .lib.settings import BW
+from .lib.settings import ASK, PLUS, INFO, TEST, WARN, ERROR, DEBUG
 
 NAME = "credmap"
 VERSION = "v0.1"
@@ -51,29 +52,6 @@ MAX_HELP_OPTION_LENGTH = 20
 
 # Character used for progress rotator
 ROTATOR_CHARS = "|/-\\"
-
-# Operating System
-WINDOWS = name == "nt"
-
-# ANSI color codes
-W = '\033[0m'
-BW = '\033[1m'
-R = '\033[31m'
-G = '\033[32m'
-O = '\033[33m'
-B = '\033[34m'
-P = '\033[35m'
-C = '\033[36m'
-GR = '\033[37m'
-
-# Information levels
-ASK = "[%s?%s]" % (("", "") if WINDOWS else (B, W))
-PLUS = "[%s+%s]" % (("", "") if WINDOWS else (G, W))
-INFO = "[%si%s]" % (("", "") if WINDOWS else (C, W))
-TEST = "[%s*%s]" % (("", "") if WINDOWS else (B, W))
-WARN = "[%s!%s] %sWarning%s:" % (("", "", "", "") if WINDOWS else (O, W, O, W))
-ERROR = "[%sx%s] %sERROR%s:" % (("", "", "", "") if WINDOWS else (R, W, R, W))
-DEBUG = "[%sd%s] %sDEBUG%s:" % (("", "", "", "") if WINDOWS else (P, W, P, W))
 
 BANNER_PASSWORDS = ("123456", "HUNTER2", "LOVE",
                     "SECRET", "ABC123", "GOD", "SEX")
@@ -104,23 +82,6 @@ USER_AGENTS_FILE = "agents.txt"
 # Location of Git repository
 GIT_REPOSITORY = "https://github.com/lightos/credmap.git"
 
-# Variable used to store command parsed arguments
-args = None
-
-# Posible values in XML file
-XML_ELEMENTS = ("url", "name", "description", "login_url", "invalid_account",
-                "inactive_account", "valid_password", "invalid_password",
-                "valid_response_header", "valid_response_header_type",
-                "response_headers", "invalid_http_status", "headers", "data",
-                "cookies", "user_agent", "username_or_email", "custom_search",
-                "login_parameter", "login_parameter_type", "multiple_params",
-                "password_parameter", "password_parameter_type", "status",
-                "csrf_token_name", "csrf_url", "csrf_setcookie", "csrf_start",
-                "csrf_regex", "csrf_end", "captcha_flag", "email_exception",
-                "multiple_params_url", "valid_user_header", "csrf_token",
-                "response_status", "login_redirect", "login_redirect_type",
-                "time_parameter")
-
 EXAMPLES = """
 Examples:
 ./credmap.py --username janedoe --email janedoe@email.com
@@ -139,19 +100,6 @@ def print(*args, **kwargs):
     return __builtins__.print(*args, **kwargs)
 
 
-class PROXY_TYPE:
-    HTTP = "HTTP"
-    HTTPS = "HTTPS"
-    SOCKS4 = "SOCKS4"
-    SOCKS5 = "SOCKS5"
-
-
-class HTTP_HEADER:
-    COOKIE = "Cookie"
-    USER_AGENT = "User-agent"
-    CONTENT_LENGTH = "Content-length"
-
-
 class AttribDict(dict):
     """
     Gets and Sets attributes for a dict.
@@ -161,410 +109,6 @@ class AttribDict(dict):
 
     def __setattr__(self, name, value):
         return self.__setitem__(name, value)
-
-
-class UserCredentials(object):
-    """
-    Populates user credentials.
-    Might can this class.
-    """
-    def __init__(self, _args):
-        self.username = _args.username
-        self.email = _args.email
-        self.password = _args.password
-
-
-class Website(object):
-    """
-    Populates the Website object with data from the XML file.
-    """
-    def __init__(self, *data, **kwargs):
-        for dictionary in data:
-            for key in dictionary:
-                setattr(self, key, dictionary[key])
-        for key in kwargs:
-            setattr(self, key, kwargs[key])
-
-        for _ in XML_ELEMENTS:
-            if not hasattr(self, _):
-                setattr(self, _, None)
-
-        self.status = {"status": 1, "msg": "%s instantiated" % self.name}
-
-    def get_page(self, data=False, header=False):
-        """
-        Retrieves page content from a given target URL
-        """
-
-        headers = {}
-        parsed_url = None
-        page = None
-        conn = None
-
-        parsed_url = urlsplit(self.url)
-
-        if self.user_agent is None:
-            self.user_agent = "%s %s" % (NAME, VERSION)
-
-        if not data:
-            parsed_url = parsed_url._replace(
-                query=urlencode(parse_qsl(parsed_url.query)))
-            self.url = urlunsplit(parsed_url)
-        else:
-            self.data = urlencode(parse_qsl(self.data, 1), "POST")
-
-        try:
-            headers[HTTP_HEADER.USER_AGENT] = self.user_agent
-
-            if header:
-                headers.update(dict([tuple(_.split("=", 1))
-                                     for _ in self.headers.split(";")]))
-
-            if args.verbose >= 2:
-                print("%s REQUEST\nURL: %s\n%sHeaders: %s\n" % (DEBUG,
-                                                                self.url,
-                                                                "DATA: %s\n" %
-                                                                self.data
-                                                                if data else
-                                                                "", headers))
-
-            req = Request(self.url, self.data if data else None, headers)
-            conn = urlopen(req)
-
-            if not page:
-                page = conn.read()
-
-        except KeyboardInterrupt:
-            raise
-
-        except Exception, error:
-            if hasattr(error, "read"):
-                page = page or error.read()
-
-            if (hasattr(error, "code") and self.invalid_http_status and
-                    error.code == int(self.invalid_http_status)):
-                pass
-            elif args.verbose:
-                if hasattr(error, "msg"):
-                    print("%s msg '%s'." % (ERROR, error.msg))
-                if hasattr(error, "reason"):
-                    print("%s reason '%s'." % (ERROR, error.reason))
-                if getattr(error, "message"):
-                    print("%s message '%s'." % (ERROR, error.message))
-                if hasattr(error, "code"):
-                    print("%s error code '%d'." % (ERROR, error.code))
-
-        # NEED TO CLEAN THIS WHOLE PART UP
-        self.status["status"] = 1 if conn else 0
-        self.status["message"] = (conn.msg if conn and hasattr(conn, "msg")
-                                  else error.msg if error and
-                                  hasattr(error, "msg") else "Unknown error!")
-        self.response_headers = (conn.info() if conn and hasattr(conn, "info")
-                                 else error.info() if error and
-                                 hasattr(error, "info") else "Unknown info!")
-        self.response_status = (conn.code if conn and hasattr(conn, "code")
-                                else error.code if error and
-                                hasattr(error, "code") else "Unknown code!")
-
-        if args.verbose >= 2:
-            print("%s RESPONSE\n%s" % (DEBUG, self.response_headers))
-
-        if args.verbose >= 3:
-            print("%s HTML\n%s" % (DEBUG, page))
-
-        return page
-
-    def add_cookies(self, cookie_handler, cookies, url=None):
-        """
-        Add cookies to the specified cookie jar.
-        Domain for the cookie can be specified via url.
-        """
-        domain = urlsplit(url or self.login_url)
-        domain = ".%s.%s" % (domain.netloc.split(".")[-2],
-                             domain.netloc.split(".")[-1])
-        for _ in parse_qsl(cookies, 1):
-            cookie = cookielib.Cookie(version=0, name=_[0], value=_[1],
-                                      port=None, port_specified=False,
-                                      domain=domain,
-                                      domain_specified=True,
-                                      domain_initial_dot=True, path='/',
-                                      path_specified=True, secure=True,
-                                      expires=None, discard=True, comment=None,
-                                      comment_url=None, rest={}, rfc2109=False)
-            cookie_handler.set_cookie(cookie)
-
-    def perform_login(self, credentials, cookie_handler):
-        """
-        Parses CSRF token if available and performs login request.
-        """
-
-        if self.cookies:
-            self.add_cookies(cookie_handler, self.cookies)
-
-        if self.csrf_token_name:
-            self.url = self.csrf_url
-            csrf_response = self.get_page()
-
-            if not csrf_response:
-                if args.verbose:
-                    print("%s problem receiving HTTP response "
-                          "while fetching token!\n" % ERROR)
-                return
-
-            if self.csrf_regex or self.csrf_setcookie:
-                match = re.search(self.csrf_regex if self.csrf_regex else
-                                  self.csrf_setcookie, csrf_response if
-                                  self.csrf_regex else str(cookie_handler),
-                                  re.I)
-                if match:
-                    self.csrf_token = (match.group("token") if "token" in
-                                       match.groupdict() else match.group(1))
-                else:
-                    self.status = {"status": 0, "msg": "No token"}
-            else:
-                start = csrf_response.find(self.csrf_start)
-                if start == -1 and args.verbose:  # lvl 1 verbose
-                    self.status = {"status": 0, "msg": "No token"}
-                end = csrf_response.find(self.csrf_end,
-                                         start+len(self.csrf_start))
-                self.csrf_token = csrf_response[start+len(self.csrf_start):end]
-
-            if self.status["msg"] == "No token" or not self.csrf_token:
-                if args.verbose:
-                    print("%s CSRF token not found. Skipping page...\n" % WARN)
-                return
-
-            if args.verbose:
-                print("%s Authentication Token: \"%s\"" %
-                      (INFO, color(self.csrf_token)))
-
-        def replace_param(string, param, value, param_format=None):
-            """
-            Replace data in parameters with given string.
-            Parameter format can be json or normal POST data.
-            """
-            if param_format == "json":
-                return re.sub(r"(?P<json_replacement>\"%s\"\s*:\s*)\"\s*\"" %
-                              param, "\\1\"%s\"" % value, string)
-            else:
-                return string.replace("%s=" % param, "%s=%s" % (param, value))
-
-        if self.multiple_params:
-            multiple_params_response = ""
-            if(self.csrf_token_name and
-               self.csrf_url == self.multiple_params_url):
-                multiple_params_response = csrf_response
-            else:
-                self.url = self.multiple_params_url
-                multiple_params_response = self.get_page()
-
-            if not multiple_params_response:
-                print("%s problem receiving HTTP response "
-                      "while fetching params!\n" % ERROR)
-                return
-
-            for _ in self.multiple_params:
-                regex = (_["regex"] if "regex" in _ else
-                         r"<\w+\s*(\s*\w+\s*=\"[^\"]*\")*\s*name="
-                         r"\"%s\"\s*(\s*\w+\s*=\"[^\"]*\")*\s*/?>"
-                         % _["value"])
-                match = re.search(regex, multiple_params_response)
-
-                if not match:
-                    if args.verbose:
-                        print("%s match for token \"%s\" was not found!"
-                              % (WARN, color(_["value"])))
-                    continue
-
-                if "regex" in _:
-                    value = (match.group("value")
-                             if "value" in match.groupdict() else
-                             match.group(1))
-                elif "value" in _:
-                    for attrib in match.groups():
-                        attrib = str(attrib).strip().split("=", 1)
-                        if attrib[0] == "value":
-                            value = attrib[1].strip("\"")
-
-                if "type" not in _:
-                    _["type"] = "data"
-
-                if _["type"] == "data" and self.data:
-                    self.data = replace_param(self.data, _["value"], value)
-                elif _["type"] == "cookie":
-                    self.add_cookies(cookie_handler, "%s=%s;" % (_["value"],
-                                                                 value))
-                else:
-                    pass  # NEED TO REPLACE GET PARAMS
-
-        if credentials.email and self.username_or_email in ("email", "both"):
-            login = credentials.email
-        elif(credentials.email and self.email_exception and
-             self.username_or_email == "username" and
-             re.search(self.email_exception, credentials.email)):
-            login = credentials.email
-        else:
-            login = credentials.username
-
-        # need to implement support for GET logins lulz
-
-        if self.time_parameter:
-            if "type" not in self.time_parameter:
-                self.time_parameter["type"] = "epoch"
-
-            if self.time_parameter["type"] == "epoch":
-                if self.data:
-                    self.data = replace_param(self.data,
-                                              self.time_parameter["value"],
-                                              time())
-
-        if self.data:
-            self.data = replace_param(self.data, self.login_parameter,
-                                      login, self.login_parameter_type)
-            self.data = replace_param(self.data, self.password_parameter,
-                                      credentials.password,
-                                      self.login_parameter_type)
-
-        # need to be able to specify where tokens can be replaced
-        if self.csrf_token:
-            self.csrf_token = quote(self.csrf_token)
-            if self.data:
-                self.data = replace_param(self.data,
-                                          self.csrf_token_name,
-                                          self.csrf_token)
-            if self.headers:
-                self.headers = replace_param(self.headers,
-                                             self.csrf_token_name,
-                                             self.csrf_token)
-            if self.cookies:
-                self.cookies = replace_param(self.cookies,
-                                             self.csrf_token_name,
-                                             self.csrf_token)
-                self.add_cookies(cookie_handler, self.cookies)
-
-        self.url = self.login_url
-        login_response = self.get_page(data=True if self.data else False,
-                                       header=True if self.headers else False)
-
-        if not login_response:
-            if args.verbose:
-                print("%s no response received! "
-                      "Skipping to next site...\n" % WARN)
-            return False
-
-        if self.login_redirect:
-            if self.login_redirect_type == "regex":
-                self.url = re.search(self.login_redirect, login_response)
-                self.url = (self.url.group("URL")
-                            if "URL" in self.url.groupdict()
-                            else self.url.group(1))
-            else:
-                self.url = self.login_redirect
-
-            self.url = self.url.replace("\\", "")
-
-            login_response = self.get_page(data=True if self.data else False,
-                                           header=True if self.headers
-                                           else False)
-
-        if not login_response:
-            if args.verbose:
-                print("%s no response received during login redirect! "
-                      "Skipping to next site...\n" % WARN)
-            return False
-
-        # The code for these IF checks need to be cleaned up
-
-        # If invalid credentials http status code is returned
-        if (self.invalid_http_status and self.response_status and
-                int(self.invalid_http_status) == int(self.response_status)):
-            if args.verbose:
-                print("%s Credentials were incorrect.\n" % INFO)
-            return False
-        # If captcha flag is set and found in login response
-        if self.captcha_flag and self.captcha_flag in login_response:
-            if args.verbose:
-                print("%s captcha detected! Skipping to next site...\n" % WARN)
-            return False
-        # If custom search is set and found in response
-        if self.custom_search and re.search(self.custom_search['regex'],
-                                            login_response):
-            if args.verbose:
-                print("%s %s\n" % (INFO, self.custom_search["value"]))
-            return False
-        # Valid password string in response
-        if self.valid_password and self.valid_password in login_response:
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
-            return True
-        # Valid response header in Cookies
-        elif (self.valid_response_header and self.valid_response_header
-              in str(cookie_handler)):
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
-            return True
-        # Valid response header type REGEX
-        elif (self.valid_response_header and
-              self.valid_response_header_type == "regex" and
-              re.search(self.valid_response_header,
-                        str(self.response_headers))):
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
-            return True
-        # Valid response header for cookies type REGEX
-        elif (self.valid_response_header and
-              self.valid_response_header_type == "regex" and
-              re.search(self.valid_response_header,
-                        str(cookie_handler))):
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
-            return True
-        # Valid response header type normal
-        elif (self.valid_response_header and self.valid_response_header
-              in str(self.response_headers)):
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
-            return True
-        # Valid response header for cookies type normal
-        elif (self.valid_response_header and self.valid_response_header
-              in str(cookie_handler)):
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
-            return True
-        # Valid user header returned, but password is incorrect
-        elif (self.valid_user_header and self.valid_user_header
-              in str(self.response_headers)):  # Special case for Imgur
-            if args.verbose:
-                print("%s The provided user exists, "
-                      "but the password was incorrect!\n" % INFO)
-            return False
-        # Invalid account string found in login response
-        elif self.invalid_account and self.invalid_account in login_response:
-            if args.verbose:
-                print("%s The provided account doesn't exist on this site.\n"
-                      % INFO)
-            return False
-        # User exists, but account isn't activate.
-        elif self.inactive_account and self.inactive_account in login_response:
-            if args.verbose:
-                print("%s The user exists, but the account isn't activate.\n"
-                      % INFO)
-            return False
-        # User exists, but invalid password string in login response
-        elif (self.invalid_password and self.invalid_account and
-              self.invalid_password in login_response):
-            if args.verbose:
-                print("%s The user exists, but the password is incorrect.\n"
-                      % INFO)
-            return False
-        # Invalid password string in login response
-        elif (self.invalid_password and not self.invalid_account and
-              self.invalid_password in login_response):
-            if args.verbose:
-                print("%s The provided credentials are incorrect "
-                      "or the account doesn't exist.\n" % INFO)
-            return False
-        # Unhandled case
-        else:
-            if args.verbose:
-                print("%s Unable to login! Skipping to next site...\n" % WARN)
-                # if verbose 2
-                # print "this happens with a response that isn't handled"
-            return False
 
 
 def get_revision():
@@ -781,8 +325,7 @@ def populate_site(site):
     """
 
     try:
-        xml_tree = xml.etree.ElementTree.parse("%s/%s.xml" %
-                                               (SITES_DIR, site)).getroot()
+        xml_tree = parse("%s/%s.xml" % (SITES_DIR, site)).getroot()
     except Exception:
         print("%s parsing XML file \"%s\". Skipping...\n" % (ERROR,
                                                              color(site, BW)))
@@ -823,7 +366,7 @@ def populate_site(site):
               "Skipping site...\n" % (ERROR, color(site_properties.name, BW)))
         return
 
-    if args.safe_urls and match.group("type").upper() != PROXY_TYPE.HTTPS:
+    if args.safe_urls and match.group("type").upper() != "HTTPS":
         if args.verbose:
             print("%s URL uses an unsafe transportation mechanism: \"%s\". "
                   "Skipping site...\n" % (WARN, match.group("type").upper()))
@@ -838,23 +381,11 @@ def populate_site(site):
     return site_properties
 
 
-def color(text, color=GR):
-    """
-    Sets the text to a given color if not running under Windows.
-    """
-
-    if name == "nt":
-        return text
-    else:
-        return "%s%s%s" % (color, text, W)
-
-
 def main():
     """
     Initializes and executes the program
     """
 
-    global args
     login_sucessful = []
     login_failed = []
 
@@ -880,8 +411,6 @@ def main():
         args.password = getpass("%s Please enter password:" % INFO)
         print("")
 
-    cookie_handler = cookielib.CookieJar()
-
     if args.ignore_proxy:
         proxy_handler = ProxyHandler({})
         opener = build_opener(HTTPHandler(), HTTPSHandler(), proxy_handler,
@@ -892,8 +421,7 @@ def main():
         match = re.search(r"(?P<type>[^:]+)://(?P<address>[^:]+)"
                           r":(?P<port>\d+)", args.proxy, re.I)
         if match:
-            if match.group("type").upper() in (PROXY_TYPE.HTTP,
-                                               PROXY_TYPE.HTTPS):
+            if match.group("type").upper() in ("HTTP", "HTTPS"):
                 proxy_handler = ProxyHandler({match.group("type"): args.proxy})
                 opener = build_opener(
                     HTTPHandler(),
@@ -924,8 +452,8 @@ def main():
     with open(USER_AGENTS_FILE, 'r') as ua_file:
         args.user_agent = sample(ua_file.readlines(), 1)[0].strip()
 
-    credentials = UserCredentials(args)
-
+    credentials = {"username": args.username, "email": args.email,
+                   "password": args.password}
     sites = list_sites()
 
     if args.only:
@@ -942,7 +470,7 @@ def main():
         _ = populate_site(site)
         if not _:
             continue
-        target = Website(_)
+        target = Website(_, {"verbose": args.verbose})
 
         if (target.username_or_email == "email" and not args.email or
                 target.username_or_email == "username" and not args.username):
