@@ -134,12 +134,13 @@ def get_revision():
 
     while True:
         if filepath and isfile(filepath):
-            with open(filepath, "r") as f:
-                content = f.read()
+            with open(filepath, "r") as file_:
+                content = file_.read()
                 filepath = None
                 if content.startswith("ref: "):
-                    filepath = join(_, ".git", content.replace("ref: ", "")
-                                    ).strip()
+                    filepath = join(
+                        _, ".git", content.replace("ref: ", "")
+                        ).strip()
                 else:
                     match = re.match(r"(?i)[0-9a-f]{32}", content)
                     retval = match.group(0) if match else None
@@ -157,21 +158,19 @@ def get_revision():
     return retval[:7] if retval else None
 
 
-def check_revision():
+def check_revision(version):
     """
     Adapts the default version string and banner to
     use the revision number.
     """
 
-    global BANNER
-    global VERSION
-
     revision = get_revision()
 
     if revision:
-        _ = VERSION
-        VERSION = "%s-%s" % (VERSION, revision)
-        BANNER = BANNER.replace(_, VERSION)
+        _ = version
+        version = "%s-%s" % (version, revision)
+
+    return version
 
 
 def update():
@@ -204,6 +203,7 @@ def update():
                       r"(?:\n\t[^\n]+)*)", stderr)
         if _:
             def question():
+                """Asks question until a valid answer of y or n is provided."""
                 print("\n%s Would you like to overwrite your changes and set "
                       "your local copy to the latest commit?" % ASK)
                 sys_stdout.write("%s ALL of your local changes will be deleted"
@@ -389,16 +389,15 @@ def main():
     """
     Initializes and executes the program
     """
-    global args
 
     login_sucessful = []
     login_failed = []
 
-    check_revision()
+    version = check_revision(VERSION)
 
     print("%s\n\n%s %s (%s)\n" % (
-        BANNER % tuple([color(_) for _ in BANNER_PASSWORDS]),
-        NAME, VERSION, URL))
+        banner % tuple([color(_) for _ in BANNER_PASSWORDS]),
+        NAME, version, URL))
 
     args = parse_args()
 
