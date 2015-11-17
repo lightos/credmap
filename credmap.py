@@ -38,10 +38,10 @@ from os.path import isfile, join, dirname, exists
 from urllib2 import build_opener, install_opener, ProxyHandler
 from urllib2 import HTTPCookieProcessor, HTTPHandler, HTTPSHandler
 
-from .lib.website import Website
-from .lib.common import color, cookie_handler
-from .lib.settings import BW
-from .lib.settings import ASK, PLUS, INFO, TEST, WARN, ERROR, DEBUG
+from lib.website import Website
+from lib.common import color, cookie_handler
+from lib.settings import BW
+from lib.settings import ASK, PLUS, INFO, TEST, WARN, ERROR, DEBUG
 
 NAME = "credmap"
 VERSION = "v0.1"
@@ -91,6 +91,7 @@ Examples:
 ./credmap.py --list
 """
 
+args = None
 
 def print(*args, **kwargs):
     """
@@ -385,6 +386,7 @@ def main():
     """
     Initializes and executes the program
     """
+    global args
 
     login_sucessful = []
     login_failed = []
