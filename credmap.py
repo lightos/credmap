@@ -431,11 +431,11 @@ def main():
                 install_opener(opener)
             else:
                 from thirdparty.socks import socks
-                if match.group("type").upper() == PROXY_TYPE.SOCKS4:
+                if match.group("type").upper() == "SOCKS4":
                     socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS4,
                                           match.group("address"),
                                           int(match.group("port")), True)
-                elif match.group("type").upper() == PROXY_TYPE.SOCKS5:
+                elif match.group("type").upper() == "SOCKS5":
                     socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5,
                                           match.group("address"),
                                           int(match.group("port")), True)
