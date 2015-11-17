@@ -396,7 +396,7 @@ def main():
     version = check_revision(VERSION)
 
     print("%s\n\n%s %s (%s)\n" % (
-        banner % tuple([color(_) for _ in BANNER_PASSWORDS]),
+        BANNER % tuple([color(_) for _ in BANNER_PASSWORDS]),
         NAME, version, URL))
 
     args = parse_args()
