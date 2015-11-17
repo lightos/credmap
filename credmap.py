@@ -338,17 +338,9 @@ def populate_site(site, args):
             site_properties.multiple_params = True
             site_properties.multiple_params_url = _.attrib["value"]
             continue
-        if _.tag == "custom_search":
-            site_properties.custom_search = {"regex": _.attrib["regex"],
-                                             "value": _.attrib["value"]}
-            continue
-        if _.tag == "time_parameter":
-            site_properties.time_parameter = {"type": _.attrib["type"],
-                                              "value": _.attrib["value"]}
-            continue
-        if _.tag == "invalid_http_status":
-            site_properties.invalid_http_status = {"msg": _.attrib["msg"],
-                                                   "value": _.attrib["value"]}
+        if _.tag in ("custom_search", "time_parameter", "invalid_http_status",
+                     "custom_response_header"):
+            site_properties[_.tag] = _.attrib
             continue
         if "value" in _.attrib:
             site_properties[_.tag] = _.attrib["value"]

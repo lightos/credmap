@@ -40,7 +40,7 @@ XML_ELEMENTS = ("url", "name", "description", "login_url", "invalid_account",
                 "password_parameter", "password_parameter_type", "status",
                 "csrf_token_name", "csrf_url", "csrf_setcookie", "csrf_start",
                 "csrf_regex", "csrf_end", "captcha_flag", "email_exception",
-                "multiple_params_url", "valid_user_header", "csrf_token",
+                "multiple_params_url", "custom_response_header", "csrf_token",
                 "response_status", "login_redirect", "login_redirect_type",
                 "time_parameter")
 
@@ -389,12 +389,12 @@ class Website(object):
               in str(cookie_handler)):
             print("%s Credentials worked! Successfully logged in.\n" % PLUS)
             return True
-        # Valid user header returned, but password is incorrect
-        elif (self.valid_user_header and self.valid_user_header
-              in str(self.response_headers)):  # Special case for Imgur
+        # Custom message when specified invalid header is detected
+        elif (self.custom_response_header and
+              self.custom_response_header["value"] in
+              str(self.response_headers)):
             if self.verbose:
-                print("%s The provided user exists, "
-                      "but the password was incorrect!\n" % INFO)
+                print("%s %s" % (INFO, self.custom_response_header["msg"]))
             return False
         # Invalid account string found in login response
         elif self.invalid_account and self.invalid_account in login_response:
