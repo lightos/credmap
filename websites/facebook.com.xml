@@ -5,7 +5,7 @@
     <valid_response_header value="c_user=" />
     <invalid_account value="t match any account" />
     <invalid_password value="Please re-enter your password" />
-	<custom_search value="This e-mail needs to be confirmed via confirmation code." regex="ajaxify=&quot;/confirm/ajax/code_entry_dialog\.php\?email=" />
+    <custom_search value="This e-mail needs to be confirmed via confirmation code." regex="ajaxify=&quot;/confirm/ajax/code_entry_dialog\.php\?email=" />
     <cookies value="locale=en_US" />
     <username_or_email value="email" />
     <login_parameter value="email" />

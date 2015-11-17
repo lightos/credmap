@@ -5,7 +5,7 @@
     <valid_password value="function rd(){window.location.replace(&quot;http" />
     <invalid_password value="That password is incorrect." />
     <invalid_account value="That Microsoft account doesn\'t exist." />
-	<custom_search value="Account blocked because of too many invalid sign in attempts." regex="tried\sto\ssign\sin\stoo\smany\stimes\swith\san\sincorrect\saccount\sor\spassword" />
+    <custom_search value="Account blocked because of too many invalid sign in attempts." regex="tried\sto\ssign\sin\stoo\smany\stimes\swith\san\sincorrect\saccount\sor\spassword" />
     <headers value="Referer=https://login.live.com/login.srf?wa=wsignin1.0&amp;rpsnv=12&amp;ct=&amp;rver=6.4.6456.0&amp;wp=MBI_SSL_SHARED&amp;wreply=https:%2F%2Fmail.live.com%2Fdefault.aspx%3Frru%3Dinbox&amp;lc=&amp;id=&amp;mkt=&amp;cbcxt=" />
     <username_or_email value="email" />
     <login_parameter value="login" />

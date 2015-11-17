@@ -1,17 +1,17 @@
 <properties>
-	<name value="Skype" />
-	<description value="A multiplatform service for video chat, voice calls, exchanging text, files and images." />
-	<login_url value="https://login.skype.com/login" />
-	<invalid_password value="Signing in failed. Please double-check your Skype Name and re-enter your password." />
-	<valid_response_header value="skype-session=[a-f0-9]{40}" type="regex" />
-	<headers value="Referer=https://login.skype.com/login" />
-	<username_or_email value="username" />
-	<login_parameter value="username" />
-	<password_parameter value="password" />
-	<time_parameter value="js_time" type="epoch" />
-	<data value="username=&amp;password=&amp;timezone_field=-08|00&amp;pie=&amp;etm=&amp;js_time=" />
-	<multiple_params value="https://login.skype.com/login">
-	    <param value="pie" />
-	    <param value="etm" />
-	</multiple_params>
+    <name value="Skype" />
+    <description value="A multiplatform service for video chat, voice calls, exchanging text, files and images." />
+    <login_url value="https://login.skype.com/login" />
+    <invalid_password value="Signing in failed. Please double-check your Skype Name and re-enter your password." />
+    <valid_response_header value="skype-session=[a-f0-9]{40}" type="regex" />
+    <headers value="Referer=https://login.skype.com/login" />
+    <username_or_email value="username" />
+    <login_parameter value="username" />
+    <password_parameter value="password" />
+    <time_parameter value="js_time" type="epoch" />
+    <data value="username=&amp;password=&amp;timezone_field=-08|00&amp;pie=&amp;etm=&amp;js_time=" />
+    <multiple_params value="https://login.skype.com/login">
+        <param value="pie" />
+        <param value="etm" />
+    </multiple_params>
 </properties>
