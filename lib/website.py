@@ -348,7 +348,7 @@ class Website(object):
                 int(self.response_status)):
             if self.verbose:
                 print("%s %s\n" % (INFO, self.invalid_http_status["msg"] if
-                                   self.invalid_http_status["msg"] else
+                                   "msg" in self.invalid_http_status else
                                    "Credentials were incorrect."))
             return False
         # If captcha flag is set and found in login response
