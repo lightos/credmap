@@ -244,6 +244,21 @@ def update():
                   "a 'git' package installed.", INFO)
 
 
+def optional_arg(arg_default):
+    """
+    Add support to optparse for optional argument values
+    """
+    def func(option, opt_str, value, parser):
+        """Function sent to args parser."""
+        if parser.rargs and not parser.rargs[0].startswith('-'):
+            _ = parser.rargs[0]
+            parser.rargs.pop(0)
+        else:
+            _ = arg_default
+        setattr(parser.values, option.dest, _)
+    return func
+
+
 def parse_args():
     """
     Parses the command line arguments.
@@ -280,7 +295,8 @@ def parse_args():
                       action="store_true",
                       help="ignore system default HTTP proxy")
 
-    parser.add_option("--proxy", dest="proxy",
+    parser.add_option("--proxy", dest="proxy", action="callback",
+                      callback=optional_arg("1"),
                       help="set proxy (e.g. \"socks5://192.168.1.2:9050\")")
 
     parser.add_option("--list", action="store_true", dest="list",
@@ -409,22 +425,16 @@ def main():
 
     if args.ignore_proxy:
         proxy_handler = ProxyHandler({})
-        opener = build_opener(HTTPHandler(), HTTPSHandler(), proxy_handler,
-                              HTTPCookieProcessor(cookie_handler))
-        install_opener(opener)
 
     elif args.proxy:
         match = re.search(r"(?P<type>[^:]+)://(?P<address>[^:]+)"
                           r":(?P<port>\d+)", args.proxy, re.I)
         if match:
             if match.group("type").upper() in ("HTTP", "HTTPS"):
-                proxy_handler = ProxyHandler({match.group("type"): args.proxy})
-                opener = build_opener(
-                    HTTPHandler(),
-                    HTTPSHandler(),
-                    proxy_handler,
-                    HTTPCookieProcessor(cookie_handler))
-                install_opener(opener)
+                proxy_host = "%s:%s" % (match.group("address"),
+                                        match.group("port"))
+                proxy_handler = ProxyHandler({"http": proxy_host,
+                                              "https": proxy_host})
             else:
                 from thirdparty.socks import socks
                 if match.group("type").upper() == "SOCKS4":
@@ -435,15 +445,18 @@ def main():
                     socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5,
                                           match.group("address"),
                                           int(match.group("port")), True)
+                proxy_handler = None
         else:
-            print("%s wrong proxy format "
-                  "(proper example: \"http://127.0.0.1:8080\")." % WARN)
-            exit()
+            proxy_handler = ProxyHandler()
     else:
-        opener = build_opener(HTTPHandler(),
-                              HTTPSHandler(),
-                              HTTPCookieProcessor(cookie_handler))
-        install_opener(opener)
+        proxy_handler = None
+
+    opener = build_opener(HTTPHandler(), HTTPSHandler(),
+                          HTTPCookieProcessor(cookie_handler))
+    if proxy_handler:
+        opener.add_handler(proxy_handler)
+
+    install_opener(opener)
 
     with open(USER_AGENTS_FILE, 'r') as ua_file:
         args.user_agent = sample(ua_file.readlines(), 1)[0].strip()
