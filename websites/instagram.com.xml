@@ -4,7 +4,7 @@
     <login_url value="https://instagram.com/accounts/login/ajax/" />
     <valid_password value="{&quot;status&quot;:&quot;ok&quot;,&quot;authenticated&quot;:true}" />
     <invalid_password value="{&quot;status&quot;:&quot;ok&quot;,&quot;authenticated&quot;:false}" />
-    <headers value="Referer=https://instagram.com/;X-Instagram-AJAX=1;X-CSRFToken=;X-Requested-With=XMLHttpRequest" />
+    <headers value="Referer=https://instagram.com/\nX-Instagram-AJAX=1\nX-CSRFToken=\nX-Requested-With=XMLHttpRequest" />
     <username_or_email value="username" />
     <login_parameter value="username" />
     <password_parameter value="password" />

@@ -86,7 +86,7 @@ class Website(object):
 
             if header:
                 headers.update(dict([tuple(_.split("=", 1))
-                                     for _ in self.headers.split(";")]))
+                                     for _ in self.headers.split("\\n")]))
 
             if self.verbose >= 2:
                 print("%s REQUEST\nURL: %s\n%sHeaders: %s\n" % (DEBUG,
@@ -259,6 +259,9 @@ class Website(object):
 
                 if _["type"] == "data" and self.data:
                     self.data = replace_param(self.data, _["value"], value)
+                elif _["type"] == "header":
+                    self.headers = replace_param(self.headers, _["value"],
+                                                 value)
                 elif _["type"] == "cookie":
                     self.add_cookies(cookie_handler, "%s=%s;" % (_["value"],
                                                                  value))

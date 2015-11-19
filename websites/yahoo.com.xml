@@ -6,7 +6,7 @@
     <invalid_account value="{&quot;status&quot;:&quot;error&quot;,&quot;code&quot;:&quot;1235&quot;" />
     <inactive_account value="{&quot;status&quot;:&quot;redirect&quot;,&quot;url&quot;:&quot;https:\/\/edit." />
     <valid_response_header value="SSL=" />
-    <headers value="X-Requested-With=XMLHttpRequest;Referer=https://login.yahoo.com/config/login" />
+    <headers value="X-Requested-With=XMLHttpRequest\nReferer=https://login.yahoo.com/config/login" />
     <username_or_email value="username" />
     <email_exception value="@yahoo\." />
     <login_parameter value="username" />
