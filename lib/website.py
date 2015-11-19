@@ -225,8 +225,8 @@ class Website(object):
                 multiple_params_response = self.get_page()
 
             if not multiple_params_response:
-                print("%s problem receiving HTTP response "
-                      "while fetching params!\n" % ERROR)
+                print("%s problem receiving HTTP response while fetching "
+                      "params! Skipping to next site...\n" % ERROR)
                 return
 
             for _ in self.multiple_params:
@@ -238,9 +238,11 @@ class Website(object):
 
                 if not match:
                     if self.verbose:
-                        print("%s match for token \"%s\" was not found!"
-                              % (WARN, color(_["value"])))
-                    continue
+                        print("%s no match for parameter \"%s\"! "
+                              "Skipping to next site...\n" %
+                              (WARN, color(_["value"])))
+                        self.status = {"status": 0, "msg": "No token"}
+                    return
 
                 if "regex" in _:
                     value = (match.group("value")
