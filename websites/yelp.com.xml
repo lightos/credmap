@@ -1,0 +1,17 @@
+<properties>
+	<name value="Yelp" />
+	<description value="A service that gathers and displays crowd-sourced reviews about local businesses." />
+	<login_url value="https://www.yelp.com/login?return_url=%2F" />
+	<valid_password value="&quot;isLoggedIn&quot;: true" />
+	<invalid_password value="The email address or password you entered is incorrect." />
+	<captcha_flag value="Please complete the word verification below to continue." />
+	<valid_response_header value="zss=" />
+	<headers value="Referer=https://www.yelp.com/login?return_url=%2F" />
+	<username_or_email value="email" />
+	<login_parameter value="email" />
+	<password_parameter value="password" />
+	<data value="csrftok=&amp;context=&amp;email=&amp;password=&amp;action_submit=Log+In" />
+	<multiple_params value="https://www.yelp.com/login?return_url=%2F">
+	    <param value="csrftok" />
+	</multiple_params>
+</properties>
