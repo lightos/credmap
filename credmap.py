@@ -266,7 +266,8 @@ def parse_args():
     # Override epilog formatting
     OptionParser.format_epilog = lambda self, formatter: self.epilog
 
-    parser = OptionParser(usage="usage: %prog --email EMAIL [options]",
+    parser = OptionParser(usage="usage: %prog --email EMAIL | --user USER "
+                          "[options]",
                           epilog=EXAMPLES)
 
     parser.add_option("-v", "--verbose", action="count", dest="verbose",
