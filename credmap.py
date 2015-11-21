@@ -42,6 +42,7 @@ from lib.website import Website
 from lib.common import color, cookie_handler
 from lib.settings import BW
 from lib.settings import ASK, PLUS, INFO, TEST, WARN, ERROR, DEBUG
+from lib.logger import logger
 
 NAME = "credmap"
 VERSION = "v0.1"
@@ -88,6 +89,7 @@ Examples:
 ./credmap.py -u johndoe -e johndoe@email.com --exclude "github.com, live.com"
 ./credmap.py -u johndoe -p abc123 -vvv --only "linkedin.com, facebook.com"
 ./credmap.py -e janedoe@example.com --verbose --proxy "https://127.0.0.1:8080"
+./credmap.py --load list.txt
 ./credmap.py --list
 """
 
@@ -306,6 +308,9 @@ def parse_args():
     parser.add_option("--update", dest="update", action="store_true",
                       help="update from the official git repository")
 
+    parser.add_option("-l", "--load", dest="load_file", 
+                      help="load list of usernames and passwords in format USERNAME:PASSWORD.")
+
     parser.formatter.store_option_strings(parser)
     parser.formatter.store_option_strings = lambda _: None
 
@@ -320,7 +325,7 @@ def parse_args():
 
     args = parser.parse_args()[0]
 
-    if not any((args.username, args.email, args.update, args.list)):
+    if not any((args.username, args.email, args.update, args.list)) and not args.load_file:
         parser.error("Required argument is missing. Use '-h' for help.")
 
     return args
@@ -420,7 +425,7 @@ def main():
             print("- %s" % _)
         exit()
 
-    if not args.password:
+    if not args.password and not args.load_file:
         args.password = getpass("%s Please enter password:" % INFO)
         print("")
 
@@ -474,7 +479,14 @@ def main():
     print("%s Loaded %d %s to test." % (INFO, len(sites),
                                         "site" if len(sites) == 1
                                         else "sites"))
+    if args.load_file:
+        print("%s Loaded %d usernames and passwords.%s\n" % (INFO, len(open(args.load_file, "r").readlines()), BW)) 
+
     print("%s Starting tests at: \"%s\"\n" % (INFO, color(strftime("%X"), BW)))
+
+    # It's time to open the log file.
+    log = logger("output")
+    log.open()
 
     for site in sites:
         _ = populate_site(site, args)
@@ -490,15 +502,38 @@ def main():
                        color(target.username_or_email)))
             continue
 
-        print("%s Testing \"%s\"" % (TEST, color(target.name, BW)))
+        if args.load_file:
+            with open(args.load_file, "r") as load_list:
+                for line in load_list.readlines():
+                    line = line[:-1]
+                    username, password = line.split(":")
+                    args.username = username
+                    args.password = password
 
-        if not target.user_agent:
-            target.user_agent = args.user_agent
+                    credentials = {"username": args.username, "email": args.email,
+                                   "password": args.password}
 
-        if target.perform_login(credentials, cookie_handler):
-            login_sucessful.append(target.name)
+                    print("%s Testing [%s:%s] on %s ..." % (TEST, args.username, args.password, color(target.name, BW)))
+                    if not target.user_agent:
+                        target.user_agent = args.user_agent
+
+                    if target.perform_login(credentials, cookie_handler):
+                        log.write(">>> %s - %s:%s\n" % ( target.name, args.email if args.username == None else args.username, args.password))
+                        login_sucessful.append(target.name)
+                    else:
+                        login_failed.append(target.name)
         else:
-            login_failed.append(target.name)
+            print("%s Testing \"%s\"" % (TEST, color(target.name, BW)))
+            if not target.user_agent:
+                target.user_agent = args.user_agent
+            if target.perform_login(credentials, cookie_handler):
+                log.write(">>> %s - %s:%s\n" % ( target.name, args.email if args.username == None else args.username, args.password))
+                login_sucessful.append(target.name)
+            else:
+                login_failed.append(target.name)
+
+    # Close the log file
+    log.close()
 
     if not args.verbose:
         print()
