@@ -12,6 +12,7 @@ Credmap is an open source tool that was created to bring awareness to the danger
 	  -u/--username=USER..  set the username to test with
 	  -p/--password=PASS..  set the password to test with
 	  -e/--email=EMAIL      set an email to test with
+	  -l/--load=LOAD_FILE   load list of credentials in format USER:PASSWORD
 	  -x/--exclude=EXCLUDE  exclude sites from testing
 	  -o/--only=ONLY        test only listed sites
 	  -s/--safe-urls        only test sites that use HTTPS.
