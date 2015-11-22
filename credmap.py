@@ -203,9 +203,8 @@ def update():
     else:
         print("%s Problem occurred while updating program.\n" % WARN)
 
-        _ = re.search(r"(?P<error>Your\slocal\schanges\sto\sthe\sfollowing\s"
-                      r"files\swould\sbe\soverwritten\sby\smerge:"
-                      r"(?:\n\t[^\n]+)*)", stderr)
+        _ = re.search(r"(?P<error>error:[^:]*files\swould\sbe\soverwritten"
+                      r"\sby\smerge:(?:\n\t[^\n]+)*)", stderr)
         if _:
             def question():
                 """Asks question until a valid answer of y or n is provided."""
@@ -231,8 +230,12 @@ def update():
 
             question()
 
-            process = Popen("git reset --hard", shell=True,
-                            stdout=PIPE, stderr=PIPE)
+            if "untracked" in stderr:
+                cmd = "git clean -df"
+            else:
+                cmd = "git reset --hard"
+
+            process = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
             stdout, _ = process.communicate()
 
             if "HEAD is now at" in stdout:
@@ -246,7 +249,8 @@ def update():
             update()
         else:
             print("%s Please make sure that you have "
-                  "a 'git' package installed.", INFO)
+                  "a 'git' package installed." % INFO)
+            print(stderr)
 
 
 def optional_arg(arg_default):
