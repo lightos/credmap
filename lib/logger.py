@@ -22,6 +22,7 @@ SOFTWARE.
 
 from time import strftime
 
+
 class logger(object):
     """ Log text into a file """
     def __init__(self, logger_file):
@@ -30,7 +31,8 @@ class logger(object):
 
     def open(self):
         """ Will keep it open until calling logger.close() """
-        self.cursor = open("%s_%s.log" %(self.logger_file, strftime("%H_%M_%S")), "w")
+        self.cursor = open("%s_%s.log" % (self.logger_file,
+                                          strftime("%H_%M_%S")), "w")
 
     def write(self, data):
         """ Write to the log file """

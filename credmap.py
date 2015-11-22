@@ -33,7 +33,7 @@ from subprocess import Popen, PIPE
 from optparse import OptionParser
 from getpass import getpass
 from random import sample
-from os import listdir
+from os import listdir, makedirs
 from os.path import isfile, join, dirname, exists
 from urllib2 import build_opener, install_opener, ProxyHandler
 from urllib2 import HTTPCookieProcessor, HTTPHandler, HTTPSHandler
@@ -76,6 +76,9 @@ BANNER = """               . .IIIII             .II
 
 # Location of the folder containing the websites to test
 SITES_DIR = "websites"
+
+# Location of the folder where results will be written to
+OUTPUT_DIR = "output"
 
 # Location of file containing user agents
 USER_AGENTS_FILE = "agents.txt"
@@ -269,7 +272,7 @@ def parse_args():
     OptionParser.format_epilog = lambda self, formatter: self.epilog
 
     parser = OptionParser(usage="usage: %prog --email EMAIL | --user USER "
-                          "[options]",
+                          "| --load LIST [options]",
                           epilog=EXAMPLES)
 
     parser.add_option("-v", "--verbose", action="count", dest="verbose",
@@ -283,6 +286,9 @@ def parse_args():
 
     parser.add_option("-e", "--email", dest="email",
                       help="set an email to test with")
+
+    parser.add_option("-l", "--load", dest="load_file",
+                      help="load list of credentials in format USER:PASSWORD")
 
     parser.add_option("-x", "--exclude", dest="exclude",
                       help="exclude sites from testing")
@@ -308,9 +314,6 @@ def parse_args():
     parser.add_option("--update", dest="update", action="store_true",
                       help="update from the official git repository")
 
-    parser.add_option("-l", "--load", dest="load_file", 
-                      help="load list of usernames and passwords in format USERNAME:PASSWORD.")
-
     parser.formatter.store_option_strings(parser)
     parser.formatter.store_option_strings = lambda _: None
 
@@ -325,7 +328,8 @@ def parse_args():
 
     args = parser.parse_args()[0]
 
-    if not any((args.username, args.email, args.update, args.list)) and not args.load_file:
+    if not any((args.username, args.email, args.update,
+                args.list, args.load_file)):
         parser.error("Required argument is missing. Use '-h' for help.")
 
     return args
@@ -401,11 +405,12 @@ def populate_site(site, args):
 
 def main():
     """
-    Initializes and executes the program
+    Initializes and executes the program.
     """
 
     login_sucessful = []
     login_failed = []
+    login_skipped = []
 
     version = check_revision(VERSION)
 
@@ -427,11 +432,10 @@ def main():
 
     if not args.password and not args.load_file:
         args.password = getpass("%s Please enter password:" % INFO)
-        print("")
+        print()
 
     if args.ignore_proxy:
         proxy_handler = ProxyHandler({})
-
     elif args.proxy:
         match = re.search(r"(?P<type>[^:]+)://(?P<address>[^:]+)"
                           r":(?P<port>\d+)", args.proxy, re.I)
@@ -476,16 +480,30 @@ def main():
     elif args.exclude:
         sites = [site for site in sites if site not in args.exclude]
 
-    print("%s Loaded %d %s to test." % (INFO, len(sites),
-                                        "site" if len(sites) == 1
-                                        else "sites"))
+    print("%s Loaded %d %s to test." %
+          (INFO, len(sites), "site" if len(sites) == 1 else "sites"))
+
     if args.load_file:
-        print("%s Loaded %d usernames and passwords.%s\n" % (INFO, len(open(args.load_file, "r").readlines()), BW)) 
+        if not isfile(args.load_file):
+            print("%s could not find the file \"%s\"" %
+                  (WARN, color(args.load_file)))
+            exit()
+
+        _ = sum(1 for line in open(args.load_file, "r"))
+        if _ < 1:
+            print("%s the file \"%s\" doesn't contain any valid credentials." %
+                  (WARN, color(args.load_file)))
+            exit()
+
+        print("%s Loaded %d credential%s from \"%s\".\n" %
+              (INFO, _, "s" if _ != 1 else "", color(args.load_file)))
 
     print("%s Starting tests at: \"%s\"\n" % (INFO, color(strftime("%X"), BW)))
 
-    # It's time to open the log file.
-    log = logger("output")
+    if not exists(OUTPUT_DIR):
+        makedirs(OUTPUT_DIR)
+
+    log = logger("%s/results" % OUTPUT_DIR)
     log.open()
 
     for site in sites:
@@ -494,57 +512,83 @@ def main():
             continue
         target = Website(_, {"verbose": args.verbose})
 
-        if (target.username_or_email == "email" and not args.email or
-                target.username_or_email == "username" and not args.username):
-            if args.verbose:
-                print("%s Skipping \"%s\" since no \"%s\" was specified.\n" %
-                      (INFO, color(target.name),
-                       color(target.username_or_email)))
-            continue
+        if not target.user_agent:
+            target.user_agent = args.user_agent
 
-        if args.load_file:
-            with open(args.load_file, "r") as load_list:
-                for line in load_list.readlines():
-                    line = line[:-1]
-                    username, password = line.split(":")
-                    args.username = username
-                    args.password = password
+        def login():
+            """
+            Verify credentials for login and check if login was successful.
+            """
+            if(target.username_or_email == "email" and not
+               credentials["email"] or
+               target.username_or_email == "username" and not
+               credentials["username"]):
+                if args.verbose:
+                    print("%s Skipping %s\"%s\" since "
+                          "no \"%s\" was specified.\n" %
+                          (INFO, "[%s:%s] on " %
+                           (credentials["username"] or
+                            credentials["email"], credentials["password"]) if
+                           args.load_file else "", color(target.name),
+                           color(target.username_or_email, BW)))
+                    login_skipped.append(target.name)
+                return
 
-                    credentials = {"username": args.username, "email": args.email,
-                                   "password": args.password}
+            print("%s Testing %s\"%s\"..." %
+                  (TEST, "[%s:%s] on " % (credentials["username"] or
+                                          credentials["email"],
+                                          credentials["password"]) if
+                   args.load_file else "", color(target.name, BW)))
 
-                    print("%s Testing [%s:%s] on %s ..." % (TEST, args.username, args.password, color(target.name, BW)))
-                    if not target.user_agent:
-                        target.user_agent = args.user_agent
+            cookie_handler.clear()
 
-                    if target.perform_login(credentials, cookie_handler):
-                        log.write(">>> %s - %s:%s\n" % ( target.name, args.email if args.username == None else args.username, args.password))
-                        login_sucessful.append(target.name)
-                    else:
-                        login_failed.append(target.name)
-        else:
-            print("%s Testing \"%s\"" % (TEST, color(target.name, BW)))
-            if not target.user_agent:
-                target.user_agent = args.user_agent
             if target.perform_login(credentials, cookie_handler):
-                log.write(">>> %s - %s:%s\n" % ( target.name, args.email if args.username == None else args.username, args.password))
-                login_sucessful.append(target.name)
+                log.write(">>> %s - %s:%s\n" %
+                          (target.name, credentials["username"] or
+                           credentials["email"], credentials["password"]))
+                login_sucessful.append("%s%s" %
+                                       (target.name, " [%s:%s]" %
+                                        (credentials["username"] or
+                                         credentials["email"],
+                                         credentials["password"]) if
+                                        args.load_file else ""))
             else:
                 login_failed.append(target.name)
 
-    # Close the log file
+        if args.load_file:
+            with open(args.load_file, "r") as load_list:
+                for user in load_list:
+                    user = user.rstrip().split(":", 1)
+                    if not user[0]:
+                        continue
+
+                    match = re.match(r"^[A-Za-z0-9._%+-]+@(?:[A-Z"
+                                     r"a-z0-9-]+\.)+[A-Za-z]{2,12}$", user[0])
+                    credentials = {"email": user[0] if match else None,
+                                   "username": None if match else user[0],
+                                   "password": user[1]}
+
+                    login()
+        else:
+            login()
+
     log.close()
 
     if not args.verbose:
         print()
 
     if len(login_sucessful) > 0 or len(login_failed) > 0:
-        print("%s Succesfully logged into %s/%s websites." %
-              (INFO, color(len(login_sucessful), BW),
-               color(len(login_sucessful) + len(login_failed), BW)))
+        _ = "%s/%s" % (color(len(login_sucessful), BW),
+                       color(len(login_sucessful) + len(login_failed), BW))
+        sign = PLUS if len(login_sucessful) > (len(login_failed) +
+                                               len(login_skipped)) else INFO
+        print("%s Succesfully logged in%s." %
+              (sign, " with %s credentials on the list." % _ if args.load_file
+               else "to %s websites." % _),)
         print("%s An overall success rate of %s.\n" %
-              (INFO, color("%%%s" % (100 * len(login_sucessful) / len(sites)),
-                           BW)))
+              (sign, color("%%%s" % (100 * len(login_sucessful) /
+                                     (len(login_sucessful) +
+                                      len(login_failed))), BW)))
 
     if len(login_sucessful) > 0:
         print("%s The provided credentials worked on the following website%s: "

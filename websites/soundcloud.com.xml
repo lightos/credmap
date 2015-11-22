@@ -3,7 +3,7 @@
     <description value="An audio distribution platform where users can upload, record, promote, and share their originally-created sounds." />
     <login_url value="https://soundcloud.com/connect/login" />
     <invalid_http_status value="422" />
-    <invalid_password value="" />
+    <invalid_password value="#tab-connect-sign-up" />
     <valid_password value="This popup should automatically close in a few seconds" />
     <username_or_email value="email" />
     <login_parameter value="username" />

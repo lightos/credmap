@@ -27,7 +27,7 @@ from urllib import urlencode
 from urllib2 import urlopen, Request, quote
 from urlparse import urlsplit, urlunsplit, parse_qsl
 
-from .common import color, cookie_handler
+from .common import color
 from .settings import PLUS, INFO, WARN, ERROR, DEBUG
 
 # Posible values in XML file
@@ -212,8 +212,12 @@ class Website(object):
             if param_format == "json":
                 return sub(r"(?P<json_replacement>\"%s\"\s*:\s*)\"\s*\"" %
                            param, "\\1\"%s\"" % value, string)
+            elif param_format == "header":
+                return sub(r"%s=[^\\n]*" % param, r"%s=%s" % (param, value),
+                           string)
             else:
-                return string.replace("%s=" % param, "%s=%s" % (param, value))
+                return sub(r"%s=[^&]*" % param, r"%s=%s" % (param, value),
+                           string)
 
         if self.multiple_params:
             multiple_params_response = ""
@@ -261,7 +265,7 @@ class Website(object):
                     self.data = replace_param(self.data, _["value"], value)
                 elif _["type"] == "header":
                     self.headers = replace_param(self.headers, _["value"],
-                                                 value)
+                                                 value, "header")
                 elif _["type"] == "cookie":
                     self.add_cookies(cookie_handler, "%s=%s;" % (_["value"],
                                                                  value))
@@ -307,7 +311,7 @@ class Website(object):
             if self.headers:
                 self.headers = replace_param(self.headers,
                                              self.csrf_token_name,
-                                             self.csrf_token)
+                                             self.csrf_token, "header")
             if self.cookies:
                 self.cookies = replace_param(self.cookies,
                                              self.csrf_token_name,
@@ -351,13 +355,17 @@ class Website(object):
         if (self.invalid_http_status and self.response_status and
                 int(self.invalid_http_status["value"]) ==
                 int(self.response_status)):
-            if self.verbose:
-                print("%s %s\n" % (INFO, self.invalid_http_status["msg"] if
-                                   "msg" in self.invalid_http_status else
-                                   "Credentials were incorrect."))
-            return False
+            if("msg" in self.invalid_http_status or not
+               login_response.strip("[]")):
+                if self.verbose:
+                    print("%s %s\n" %
+                          (INFO, self.invalid_http_status["msg"] if "msg"
+                           in self.invalid_http_status else
+                           "The provided credentials are incorrect "
+                           "or the account doesn't exist.\n"))
+                return False
         # If captcha flag is set and found in login response
-        elif self.captcha_flag and self.captcha_flag in login_response:
+        if self.captcha_flag and self.captcha_flag in login_response:
             if self.verbose:
                 print("%s captcha detected! Skipping to next site...\n" % WARN)
             return False

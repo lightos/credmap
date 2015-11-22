@@ -2,7 +2,7 @@
     <name value="Skype" />
     <description value="A multiplatform service for video chat, voice calls, exchanging text, files and images." />
     <login_url value="https://login.skype.com/login" />
-    <invalid_password value="Signing in failed. Please double-check your Skype Name and re-enter your password." />
+    <invalid_password value="id=&quot;signIn" />
     <valid_response_header value="skype-session=[a-f0-9]{40}" type="regex" />
     <headers value="Referer=https://login.skype.com/login" />
     <username_or_email value="username" />
