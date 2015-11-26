@@ -4,7 +4,7 @@ credmap: The Credential Mapper
 Credmap is an open source tool that was created to bring awareness to the dangers of credential reuse. It is capable of testing supplied user credentials on several known websites to test if the password has been reused on any of these.
 
 ### Help Menu
-    Usage: credmap.py --email EMAIL [options]
+    Usage: credmap.py --email EMAIL | --user USER | --load LIST [options]
 
 	Options:
 	  -h/--help             show this help message and exit
