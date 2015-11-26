@@ -21,7 +21,7 @@ SOFTWARE.
 """
 
 from time import time
-from re import I, sub, search
+from re import I, sub, search, escape
 from cookielib import Cookie
 from urllib import urlencode
 from urllib2 import urlopen, Request, quote
@@ -211,13 +211,13 @@ class Website(object):
             """
             if param_format == "json":
                 return sub(r"(?P<json_replacement>\"%s\"\s*:\s*)\"\s*\"" %
-                           param, "\\1\"%s\"" % value, string)
+                           escape(param), "\\1\"%s\"" % value, string)
             elif param_format == "header":
-                return sub(r"%s=[^\\n]*" % param, r"%s=%s" % (param, value),
-                           string)
+                return sub(r"%s=[^\\n]*" % escape(param),
+                           "%s=%s" % (param, value), string)
             else:
-                return sub(r"%s=[^&]*" % param, r"%s=%s" % (param, value),
-                           string)
+                return sub(r"%s=[^&]*" % escape(param),
+                           "%s=%s" % (param, value), string)
 
         if self.multiple_params:
             multiple_params_response = ""
