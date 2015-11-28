@@ -3,6 +3,8 @@
     <description value="A multiplatform service for video chat, voice calls, exchanging text, files and images." />
     <login_url value="https://login.skype.com/login" />
     <invalid_password value="id=&quot;signIn" />
+	<custom_search value="Account temporarily blocked." regex="sign\sin\swith\sthe\swrong\spassword\stoo\smany\stimes" />
+	<captcha_flag value="We need to double-check your details." />
     <valid_response_header value="skype-session=[a-f0-9]{40}" type="regex" />
     <headers value="Referer=https://login.skype.com/login" />
     <username_or_email value="username" />

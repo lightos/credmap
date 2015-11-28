@@ -4,7 +4,7 @@
 	<login_url value="https://www.yelp.com/login?return_url=%2F" />
 	<valid_password value="&quot;isLoggedIn&quot;: true" />
 	<invalid_password value="The email address or password you entered is incorrect." />
-	<captcha_flag value="Please complete the word verification below to continue." />
+	<captcha_flag value="recaptcha_instruct" />
 	<valid_response_header value="zss=" />
 	<headers value="Referer=https://www.yelp.com/login?return_url=%2F" />
 	<username_or_email value="email" />
