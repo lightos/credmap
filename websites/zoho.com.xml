@@ -2,9 +2,9 @@
     <name value="Zoho" />
     <description value="Online Office Suite and SaaS Applications for Businesses." />
     <login_url value="https://accounts.zoho.com/login" />
-    <valid_password value="showsuccess('https\x3A\x2F\x2Faccounts.zoho.com\x2Fu\x2Fh'" />
+    <valid_password value="showsuccess('https\x3A\x2F\x2Faccounts.zoho.com" />
     <invalid_password value="Invalid\x20password" />
-    <invalid_account value="No\x20such\x20account" />
+    <invalid_account value="Invalid\x20email\x20address" />
 	<custom_search value="Credentials worked! However, user hasn't confirmed their e-mail." regex="\\x2Funconfirmed\\x3Faction\\x3Dui\\x26user" />
     <username_or_email value="email" />
     <login_parameter value="LOGIN_ID" />
