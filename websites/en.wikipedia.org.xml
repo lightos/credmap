@@ -12,6 +12,6 @@
     <password_parameter value="wpPassword" />
     <csrf_token_name value="wpLoginToken" />
     <csrf_url value="https://en.wikipedia.org/w/index.php?title=Special:UserLogin&amp;returnto=Main+Page&amp;returntoquery=gettingStartedReturn%3Dtrue" />
-    <csrf_regex value="value=&quot;(?P&lt;token&gt;.{32})&quot; name=&quot;wpLoginToken&quot;" />
+    <csrf_regex value="value=&quot;(?P&lt;token&gt;[^&quot;]{42})&quot;\sname=&quot;wpLoginToken&quot;" />
     <data value="wpName=&amp;wpPassword=&amp;wpLoginAttempt=Log+in&amp;wpLoginToken=&amp;wpForceHttps=1&amp;wpFromhttp=" />
 </properties>
