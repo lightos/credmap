@@ -510,7 +510,7 @@ def main():
     if not exists(OUTPUT_DIR):
         makedirs(OUTPUT_DIR)
 
-    log = logger("%s/results" % OUTPUT_DIR)
+    log = logger("%s/credmap" % OUTPUT_DIR)
     log.open()
 
     for site in sites:
