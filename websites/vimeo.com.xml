@@ -11,7 +11,7 @@
     <data value="action=login&amp;service=vimeo&amp;email=&amp;password=&amp;null=Logging%20in...&amp;token=&amp;" />
     <multiple_params value="https://vimeo.com/log_in">
         <param value="vuid" regex="&quot;user&quot;:{&quot;vuid&quot;:&quot;(?P&lt;value&gt;[^&quot;]*)&quot;" type="cookie"/>
-        <param value="token" regex="vimeo.xsrft\s=\s&apos;(?P&lt;value&gt;[^&apos;]*)&apos;;" type="data" />
+        <param value="token" regex="xsrft&quot;:&quot;(?P&lt;value&gt;[^&quot;]*)&quot;" type="data" />
     </multiple_params>
 </properties>
 
