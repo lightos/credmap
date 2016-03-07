@@ -302,7 +302,7 @@ def parse_args():
 
     parser.add_option("-s", "--safe-urls", dest="safe_urls",
                       action="store_true",
-                      help="only test sites that use HTTPS.")
+                      help="only test sites that use HTTPS")
 
     parser.add_option("-i", "--ignore-proxy", dest="ignore_proxy",
                       action="store_true",
