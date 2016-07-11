@@ -36,7 +36,7 @@ from random import sample
 from os import listdir, makedirs
 from os.path import isfile, join, dirname, exists
 from urllib2 import build_opener, install_opener, ProxyHandler
-from urllib2 import HTTPCookieProcessor, HTTPHandler, HTTPSHandler
+from urllib2 import HTTPCookieProcessor, HTTPHandler, HTTPSHandler, quote
 
 from lib.website import Website
 from lib.common import color, cookie_handler
@@ -479,7 +479,7 @@ def main():
         args.user_agent = sample(ua_file.readlines(), 1)[0].strip()
 
     credentials = {"username": args.username, "email": args.email,
-                   "password": args.password}
+                   "password": quote(args.password)}
     sites = list_sites()
 
     if args.only:
