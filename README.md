@@ -27,3 +27,7 @@ Credmap is an open source tool that was created to bring awareness to the danger
 	./credmap.py -e janedoe@example.com --verbose --proxy "https://127.0.0.1:8080"
 	./credmap.py --load list.txt
 	./credmap.py --list
+
+
+### Add new websites
+Adding new websites to be tested using credmap can be done by creating a new XML file in the websites/ folder. To view a list of all possible tags that can be used in the XML file, please refer to the [Wiki](https://github.com/lightos/credmap/wiki).
