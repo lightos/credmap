@@ -173,7 +173,15 @@ class Website(object):
             csrf_response = self.get_page()
 
             if not csrf_response:
-                if self.verbose:
+                if (self.invalid_http_status and self.response_status and
+                    int(self.invalid_http_status["value"]) ==
+                    int(self.response_status)):
+                    if("msg" in self.invalid_http_status and self.verbose):
+                        print("%s %s\n" %
+                              (INFO, self.invalid_http_status["msg"] if "msg"
+                               in self.invalid_http_status else
+                               "Your IP may have been blocked..."))
+                elif self.verbose:
                     print("%s problem receiving HTTP response "
                           "while fetching token!\n" % ERROR)
                 return
@@ -228,6 +236,16 @@ class Website(object):
                 self.url = self.multiple_params_url
                 multiple_params_response = self.get_page()
 
+            if (self.invalid_http_status and self.response_status and
+                int(self.invalid_http_status["value"]) ==
+                int(self.response_status)):
+                if("msg" in self.invalid_http_status and self.verbose):
+                    print("%s %s\n" %
+                          (INFO, self.invalid_http_status["msg"] if "msg"
+                           in self.invalid_http_status else
+                           "Your IP may have been blocked..."))
+                return
+
             if not multiple_params_response:
                 print("%s problem receiving HTTP response while fetching "
                       "params! Skipping to next site...\n" % ERROR)
@@ -243,7 +261,7 @@ class Website(object):
                 if not match:
                     if self.verbose:
                         print("%s no match for parameter \"%s\"! "
-                              "Skipping to next site...\n" %
+                              "Skipping site...\n" %
                               (WARN, color(_["value"])))
                         self.status = {"status": 0, "msg": "No token"}
                     return
