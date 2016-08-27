@@ -27,9 +27,9 @@ Credmap is an open source tool that was created to bring awareness to the danger
 	./credmap.py -u johndoe -p abc123 -vvv --only "linkedin.com, facebook.com"
 	./credmap.py -e janedoe@example.com --verbose --proxy "https://127.0.0.1:8080"
 	./credmap.py --load creds.txt --format "e.u.p"
-        ./credmap.py -l creds.txt -f "u|e:p"
-        ./credmap.py -l creds.txt
-        ./credmap.py --list
+	./credmap.py -l creds.txt -f "u|e:p"
+	./credmap.py -l creds.txt
+	./credmap.py --list
 
 
 ### Add new websites
