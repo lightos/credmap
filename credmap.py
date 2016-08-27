@@ -434,8 +434,9 @@ def main():
         update()
         exit()
 
+    sites = list_sites()
+
     if args.list:
-        sites = list_sites()
         for _ in sites:
             print("- %s" % _)
         exit()
@@ -481,8 +482,6 @@ def main():
     with open(USER_AGENTS_FILE, 'r') as ua_file:
         args.user_agent = sample(ua_file.readlines(), 1)[0].strip()
 
-    sites = list_sites()
-
     if args.only:
         sites = [site for site in sites if site in args.only]
     elif args.exclude:
@@ -514,86 +513,98 @@ def main():
     log = logger("%s/credmap" % OUTPUT_DIR)
     log.open()
 
-    for site in sites:
-        _ = populate_site(site, args)
-        if not _:
-            continue
-        target = Website(_, {"verbose": args.verbose})
+    def get_targets():
+        for site in sites:
+            _ = populate_site(site, args)
+            if not _:
+                continue
+            target = Website(_, {"verbose": args.verbose})
 
-        if not target.user_agent:
-            target.user_agent = args.user_agent
+            if not target.user_agent:
+                target.user_agent = args.user_agent
 
-        def login():
-            """
-            Verify credentials for login and check if login was successful.
-            """
-            if(target.username_or_email == "email" and not
-               credentials["email"] or
-               target.username_or_email == "username" and not
-               credentials["username"]):
-                if args.verbose:
-                    print("%s Skipping %s\"%s\" since "
-                          "no \"%s\" was specified.\n" %
-                          (INFO, "[%s:%s] on " %
-                           (credentials["username"] or
-                            credentials["email"], credentials["password"]) if
-                           args.load_file else "", color(target.name),
-                           color(target.username_or_email, BW)))
-                    login_skipped.append(target.name)
-                return
+            yield target
 
-            print("%s Testing %s\"%s\"..." %
-                  (TEST, "[%s:%s] on " % (credentials["username"] or
-                                          credentials["email"],
-                                          credentials["password"]) if
-                   args.load_file else "", color(target.name, BW)))
+    def login():
+        """
+        Verify credentials for login and check if login was successful.
+        """
+        if(target.username_or_email == "email" and not
+           credentials["email"] or
+           target.username_or_email == "username" and not
+           credentials["username"]):
+            if args.verbose:
+                print("%s Skipping %s\"%s\" since "
+                      "no \"%s\" was specified.\n" %
+                      (INFO, "[%s:%s] on " %
+                       (credentials["username"] or
+                        credentials["email"], credentials["password"]) if
+                       args.load_file else "", color(target.name),
+                       color(target.username_or_email, BW)))
+                login_skipped.append(target.name)
+            return
 
-            cookie_handler.clear()
+        print("%s Testing %s\"%s\"..." %
+              (TEST, "[%s:%s] on " % (credentials["username"] or
+                                      credentials["email"],
+                                      credentials["password"]) if
+               args.load_file else "", color(target.name, BW)))
 
-            if target.perform_login(credentials, cookie_handler):
-                log.write(">>> %s - %s:%s\n" %
-                          (target.name, credentials["username"] or
-                           credentials["email"], credentials["password"]))
-                login_sucessful.append("%s%s" %
-                                       (target.name, " [%s:%s]" %
-                                        (credentials["username"] or
-                                         credentials["email"],
-                                         credentials["password"]) if
-                                        args.load_file else ""))
-            else:
-                login_failed.append(target.name)
+        cookie_handler.clear()
 
-        if args.load_file:
-            if args.cred_format:
-                separators = [re.escape(args.cred_format[1]),
-                              re.escape(args.cred_format[3]) if
-                              len(args.cred_format) > 3 else "\n"]
-                cred_format = re.match(r"(u|e|p)[^upe](u|e|p)"
-                                       r"(?:[^upe](u|e|p))?", args.cred_format)
-                if not cred_format:
-                    print("%s Could not parse --format: \"%s\""
-                          % (ERROR, color(args.cred_format, BW)))
-                    exit()
+        if target.perform_login(credentials, cookie_handler):
+            log.write(">>> %s - %s:%s\n" %
+                      (target.name, credentials["username"] or
+                       credentials["email"], credentials["password"]))
+            login_sucessful.append("%s%s" %
+                                   (target.name, " [%s:%s]" %
+                                    (credentials["username"] or
+                                     credentials["email"],
+                                     credentials["password"]) if
+                                    args.load_file else ""))
+        else:
+            login_failed.append(target.name)
 
-                cred_format = [_.replace("e", "email")
-                               .replace("u", "username")
-                               .replace("p", "password")
-                               for _ in cred_format.groups() if _ is not None]
+    if args.load_file:
+        if args.cred_format:
+            separators = [re.escape(args.cred_format[1]),
+                          re.escape(args.cred_format[3]) if
+                          len(args.cred_format) > 3 else "\n"]
+            cred_format = re.match(r"(u|e|p)[^upe](u|e|p)(?:[^upe](u|e|p))?",
+                                   args.cred_format)
+            if not cred_format:
+                print("%s Could not parse --format: \"%s\""
+                      % (ERROR, color(args.cred_format, BW)))
+                exit()
 
-            with open(args.load_file, "r") as load_list:
-                for user in load_list:
-                    if args.cred_format:
-                        match = re.match(r"([^{0}]+){0}([^{1}]+)"
-                                         r"(?:{1}([^\n]+))?"
-                                         .format(separators[0], separators[1]),
-                                         user)
-                        credentials = dict(zip(cred_format, match.groups()))
-                        credentials["password"] = quote(
-                            credentials["password"])
+            cred_format = [_.replace("e", "email")
+                           .replace("u", "username")
+                           .replace("p", "password")
+                           for _ in cred_format.groups() if _ is not None]
 
-                        login()
+        with open(args.load_file, "r") as load_list:
+            for user in load_list:
+                if args.cred_format:
+                    match = re.match(r"([^{0}]+){0}([^{1}]+)(?:{1}([^\n]+))?"
+                                     .format(separators[0], separators[1]),
+                                     user)
+                    credentials = dict(zip(cred_format, match.groups()))
+                    credentials["password"] = quote(
+                        credentials["password"])
+                    if "email" in credentials and not re.match(
+                        r"^[A-Za-z0-9._%+-]+@(?:[A-Z"
+                        r"a-z0-9-]+\.)+[A-Za-z]{2,12}$",
+                            credentials["email"]):
+                        print("%s Specified e-mail \"%s\" does not appear "
+                              "to be correct. Skipping...\n" % (WARN, color(
+                                  credentials["email"], BW)))
                         continue
 
+                    if "email" not in credentials:
+                        credentials["email"] = None
+                    elif "username" not in credentials:
+                        credentials["username"] = None
+                else:
                     user = user.rstrip().split(":", 1)
                     if not user[0]:
                         if args.verbose:
@@ -607,10 +618,12 @@ def main():
                                    "username": None if match else user[0],
                                    "password": quote(user[1])}
 
+                for target in get_targets():
                     login()
-        else:
-            credentials = {"username": args.username, "email": args.email,
-                           "password": quote(args.password)}
+    else:
+        credentials = {"username": args.username, "email": args.email,
+                       "password": quote(args.password)}
+        for target in get_targets():
             login()
 
     log.close()
