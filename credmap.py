@@ -567,7 +567,7 @@ def main():
             if args.cred_format:
                 separators = [re.escape(args.cred_format[1]),
                               re.escape(args.cred_format[3]) if
-                              len(args.cred_format)>3 else "\n"]
+                              len(args.cred_format) > 3 else "\n"]
                 cred_format = re.match(r"(u|e|p)[^upe](u|e|p)"
                                        r"(?:[^upe](u|e|p))?", args.cred_format)
                 if not cred_format:
