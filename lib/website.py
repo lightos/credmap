@@ -253,9 +253,10 @@ class Website(object):
 
             for _ in self.multiple_params:
                 regex = (_["regex"] if "regex" in _ else
-                         r"<\w+[^>]*(value\s*=\s*\"[^\"]*\"|name\s*=\s*\"?%s\""
-                         r"?)[^>]*(value\s*=\s*\"[^\"]*\"|name\s*=\s*\"?%s\""
-                         r"?)[^>]*>" % (_["value"], _["value"]))
+                         r"<\w+[^>]*(value\s*=\s*\"[^\"]*\"|name\s*=\s*"
+                         r"\"?{0}(?:\"|\s))[^>]*(value\s*=\s*\"[^\"]*\""
+                         r"|name\s*=\s*\"?{0}(?:\"|\s))[^>]*>"
+                         .format(escape(_["value"])))
                 match = search(regex, multiple_params_response)
 
                 if not match or "value" not in _:
