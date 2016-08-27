@@ -294,6 +294,9 @@ def parse_args():
     parser.add_option("-l", "--load", dest="load_file",
                       help="load list of credentials in format USER:PASSWORD")
 
+    parser.add_option("-f", "--format", dest="cred_format",
+                      help="format to use when reading credentials from file")
+
     parser.add_option("-x", "--exclude", dest="exclude",
                       help="exclude sites from testing")
 
@@ -478,8 +481,6 @@ def main():
     with open(USER_AGENTS_FILE, 'r') as ua_file:
         args.user_agent = sample(ua_file.readlines(), 1)[0].strip()
 
-    credentials = {"username": args.username, "email": args.email,
-                   "password": quote(args.password)}
     sites = list_sites()
 
     if args.only:
@@ -563,20 +564,53 @@ def main():
                 login_failed.append(target.name)
 
         if args.load_file:
+            if args.cred_format:
+                separators = [re.escape(args.cred_format[1]),
+                              re.escape(args.cred_format[3]) if
+                              len(args.cred_format)>3 else "\n"]
+                cred_format = re.match(r"(u|e|p)[^upe](u|e|p)"
+                                       r"(?:[^upe](u|e|p))?", args.cred_format)
+                if not cred_format:
+                    print("%s Could not parse --format: \"%s\""
+                          % (ERROR, color(args.cred_format, BW)))
+                    exit()
+
+                cred_format = [_.replace("e", "email")
+                               .replace("u", "username")
+                               .replace("p", "password")
+                               for _ in cred_format.groups() if _ is not None]
+
             with open(args.load_file, "r") as load_list:
                 for user in load_list:
+                    if args.cred_format:
+                        match = re.match(r"([^{0}]+){0}([^{1}]+)"
+                                         r"(?:{1}([^\n]+))?"
+                                         .format(separators[0], separators[1]),
+                                         user)
+                        credentials = dict(zip(cred_format, match.groups()))
+                        credentials["password"] = quote(
+                            credentials["password"])
+
+                        login()
+                        continue
+
                     user = user.rstrip().split(":", 1)
                     if not user[0]:
+                        if args.verbose:
+                            print("%s Could not parse credentials: \"%s\"\n" %
+                                  (WARN, color(user, BW)))
                         continue
 
                     match = re.match(r"^[A-Za-z0-9._%+-]+@(?:[A-Z"
                                      r"a-z0-9-]+\.)+[A-Za-z]{2,12}$", user[0])
                     credentials = {"email": user[0] if match else None,
                                    "username": None if match else user[0],
-                                   "password": user[1]}
+                                   "password": quote(user[1])}
 
                     login()
         else:
+            credentials = {"username": args.username, "email": args.email,
+                           "password": quote(args.password)}
             login()
 
     log.close()
