@@ -92,7 +92,9 @@ Examples:
 ./credmap.py -u johndoe -e johndoe@email.com --exclude "github.com, live.com"
 ./credmap.py -u johndoe -p abc123 -vvv --only "linkedin.com, facebook.com"
 ./credmap.py -e janedoe@example.com --verbose --proxy "https://127.0.0.1:8080"
-./credmap.py --load list.txt
+./credmap.py --load creds.txt --format "e.u.p"
+./credmap.py -l creds.txt -f "u|e:p"
+./credmap.py -l creds.txt
 ./credmap.py --list
 """
 
@@ -295,7 +297,7 @@ def parse_args():
                       help="load list of credentials in format USER:PASSWORD")
 
     parser.add_option("-f", "--format", dest="cred_format",
-                      help="format to use when reading credentials from file")
+                      help="format to use when reading from file (e.g. u|e:p)")
 
     parser.add_option("-x", "--exclude", dest="exclude",
                       help="exclude sites from testing")
