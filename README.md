@@ -13,6 +13,7 @@ Credmap is an open source tool that was created to bring awareness to the danger
 	  -p/--password=PASS..  set the password to test with
 	  -e/--email=EMAIL      set an email to test with
 	  -l/--load=LOAD_FILE   load list of credentials in format USER:PASSWORD
+	  -f/--format=CRED_F..  format to use when reading from file (e.g. u|e:p)
 	  -x/--exclude=EXCLUDE  exclude sites from testing
 	  -o/--only=ONLY        test only listed sites
 	  -s/--safe-urls        only test sites that use HTTPS.
@@ -25,7 +26,9 @@ Credmap is an open source tool that was created to bring awareness to the danger
 	./credmap.py -u johndoe -e johndoe@email.com --exclude "github.com, live.com"
 	./credmap.py -u johndoe -p abc123 -vvv --only "linkedin.com, facebook.com"
 	./credmap.py -e janedoe@example.com --verbose --proxy "https://127.0.0.1:8080"
-	./credmap.py --load list.txt
+	./credmap.py --load creds.txt --format "e.u.p"
+	./credmap.py -l creds.txt -f "u|e:p"
+	./credmap.py -l creds.txt
 	./credmap.py --list
 
 
