@@ -79,7 +79,8 @@ class Website(object):
                 query=urlencode(parse_qsl(parsed_url.query)))
             self.url = urlunsplit(parsed_url)
         else:
-            self.data = urlencode(parse_qsl(self.data, 1), "POST")
+            self.data = urlencode(parse_qsl(self.data.replace("+", "%2B"), 1),
+                                  "POST")
 
         try:
             headers["User-agent"] = self.user_agent
@@ -221,11 +222,15 @@ class Website(object):
                 return sub(r"(?P<json_replacement>\"%s\"\s*:\s*)\"\s*\"" %
                            escape(param), "\\1\"%s\"" % value, string)
             elif param_format == "header":
-                return sub(r"%s=[^\\n]*" % escape(param),
-                           "%s=%s" % (param, value), string)
+                return sub(r"%s=[^\\n]*" % str(param)
+                           .encode('string-escape'), r"%s=%s" %
+                           (str(param).encode('string-escape'),
+                            str(value).encode('string-escape')), string)
             else:
-                return sub(r"%s=[^&]*" % escape(param),
-                           "%s=%s" % (param, value), string)
+                return sub(r"%s=[^&]*" % str(param)
+                           .encode('string-escape'), r"%s=%s" %
+                           (str(param).encode('string-escape'),
+                            str(value).encode('string-escape')), string)
 
         if self.multiple_params:
             multiple_params_response = ""
