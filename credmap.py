@@ -361,9 +361,13 @@ def populate_site(site, args):
 
     try:
         xml_tree = parse("%s/%s.xml" % (SITES_DIR, site)).getroot()
-    except Exception:
-        print("%s parsing XML file \"%s\". Skipping...\n" % (ERROR,
+    except Exception as e:
+        print("%s parsing XML file \"%s\". Skipping..." % (ERROR,
                                                              color(site, BW)))
+        if args.verbose:
+            print("%s: %s" % (ERROR, e.message))
+        print()
+
         return
 
     site_properties = AttribDict()
