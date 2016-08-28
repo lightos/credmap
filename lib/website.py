@@ -23,7 +23,7 @@ SOFTWARE.
 from time import time
 from re import I, sub, search, escape
 from cookielib import Cookie
-from urllib import urlencode
+from urllib import urlencode, unquote_plus
 from urllib2 import urlopen, Request, quote
 from urlparse import urlsplit, urlunsplit, parse_qsl
 
@@ -78,9 +78,11 @@ class Website(object):
             parsed_url = parsed_url._replace(
                 query=urlencode(parse_qsl(parsed_url.query)))
             self.url = urlunsplit(parsed_url)
+        elif self.login_parameter_type == "json":
+            self.data = unquote_plus(self.data)
         else:
-            self.data = urlencode(parse_qsl(self.data.replace("+", "%2B"), 1),
-                                  "POST")
+            self.data = urlencode(parse_qsl(
+                self.data.replace("+", "%2B"), 1), "POST")
 
         try:
             headers["User-agent"] = self.user_agent
@@ -90,12 +92,10 @@ class Website(object):
                                      for _ in self.headers.split("\\n")]))
 
             if self.verbose >= 2:
-                print("%s REQUEST\nURL: %s\n%sHeaders: %s\n" % (DEBUG,
-                                                                self.url,
-                                                                "DATA: %s\n" %
-                                                                self.data
-                                                                if data else
-                                                                "", headers))
+                print("%s REQUEST\nURL: "
+                      "%s\n%sHeaders: %s\n" % (DEBUG, self.url, "DATA: %s\n" %
+                                               self.data if data else "",
+                                               headers))
 
             req = Request(self.url, self.data if data else None, headers)
             conn = urlopen(req)
@@ -111,7 +111,13 @@ class Website(object):
                 page = page or error.read()
 
             if (hasattr(error, "code") and self.invalid_http_status and
+                    "*" not in self.invalid_http_status["value"] and
                     error.code == int(self.invalid_http_status["value"])):
+                pass
+            elif (hasattr(error, "code") and self.invalid_http_status and
+                    "*" in self.invalid_http_status["value"] and
+                    str(error.code)[0] ==
+                    str(self.invalid_http_status["value"])[0]):
                 pass
             elif self.verbose:
                 if hasattr(error, "msg"):
@@ -175,8 +181,8 @@ class Website(object):
 
             if not csrf_response:
                 if (self.invalid_http_status and self.response_status and
-                    int(self.invalid_http_status["value"]) ==
-                    int(self.response_status)):
+                    int(self.invalid_http_status["value"]) == int(
+                        self.response_status)):
                     if("msg" in self.invalid_http_status and self.verbose):
                         print("%s %s\n" %
                               (INFO, self.invalid_http_status["msg"] if "msg"
@@ -218,17 +224,16 @@ class Website(object):
             Replace data in parameters with given string.
             Parameter format can be json or normal POST data.
             """
+
             if param_format == "json":
                 return sub(r"(?P<json_replacement>\"%s\"\s*:\s*)\"\s*\"" %
-                           escape(param), "\\1\"%s\"" % value, string)
+                           escape(str(param)), "\\1\"%s\"" % value, string)
             elif param_format == "header":
-                return sub(r"%s=[^\\n]*" % str(param)
-                           .encode('string-escape'), r"%s=%s" %
+                return sub(r"%s=[^\\n]*" % escape(str(param)), r"%s=%s" %
                            (str(param).encode('string-escape'),
                             str(value).encode('string-escape')), string)
             else:
-                return sub(r"%s=[^&]*" % str(param)
-                           .encode('string-escape'), r"%s=%s" %
+                return sub(r"%s=[^&]*" % escape(str(param)), r"%s=%s" %
                            (str(param).encode('string-escape'),
                             str(value).encode('string-escape')), string)
 
@@ -242,8 +247,8 @@ class Website(object):
                 multiple_params_response = self.get_page()
 
             if (self.invalid_http_status and self.response_status and
-                int(self.invalid_http_status["value"]) ==
-                int(self.response_status)):
+                int(self.invalid_http_status["value"]) == int(
+                    self.response_status)):
                 if("msg" in self.invalid_http_status and self.verbose):
                     print("%s %s\n" %
                           (INFO, self.invalid_http_status["msg"] if "msg"
@@ -331,7 +336,8 @@ class Website(object):
             if self.data:
                 self.data = replace_param(self.data,
                                           self.csrf_token_name,
-                                          self.csrf_token)
+                                          self.csrf_token,
+                                          self.login_parameter_type)
             if self.headers:
                 self.headers = replace_param(self.headers,
                                              self.csrf_token_name,
@@ -374,11 +380,17 @@ class Website(object):
             return False
 
         # The code for these IF checks need to be cleaned up
-
+        if(self.invalid_http_status and self.response_status):
+            if("*" in self.invalid_http_status):
+                if(str(self.invalid_http_status["value"])
+                   [0] == str(self.response_status)[0]):
+                    if("msg" in self.invalid_http_status):
+                        if self.invalid_http_status["msg"] == "0":
+                            pass
         # If invalid credentials http status code is returned
-        if (self.invalid_http_status and self.response_status and
-                int(self.invalid_http_status["value"]) ==
-                int(self.response_status)):
+        elif (self.invalid_http_status and self.response_status and
+              str(self.invalid_http_status["value"]) ==
+              str(self.response_status)):
             if("msg" in self.invalid_http_status or not
                login_response.strip("[]")):
                 if self.verbose:
