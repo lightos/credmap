@@ -2,12 +2,12 @@
     <name value="SoundCloud" />
     <description value="Online audio network for users to upload, promote, and share their music." />
     <login_url value="https://sign-in.soundcloud.com/sign-in/password" />
-    <invalid_http_status value="4**" msg="0" />
+    <valid_http_status value="4**" />
     <valid_password value="{&quot;session&quot;:{&quot;access_token&quot;:&quot;" />
     <invalid_password value="{&quot;error&quot;:&quot;invalid_credentials&quot;}" />
     <invalid_account value="&quot;error&quot;:&quot;not_found&quot;,&quot;identifier_type&quot;:&quot;email&quot;" />
     <headers value="Origin=https://soundcloud.com\nReferer=https://soundcloud.com/\nAccept=application/json, text/javascript, */*; q=0.1\nAccept-Language=en-US,en;q=0.5\nAccept-Encoding=gzip, deflate, br\nContent-Type=application/json" />
-    <username_or_email value="email" />{"error":"captcha_required"}
+    <username_or_email value="email" />
     <login_parameter value="identifier" type="json" />
     <password_parameter value="password" type="json" />
     <csrf_token_name value="client_id" />

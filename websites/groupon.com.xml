@@ -2,6 +2,7 @@
     <name value="Groupon" />
     <description value="A global e-commerce marketplace connecting subscribers with local merchants by offering activities, travel, goods and services." />
     <login_url value="https://www.groupon.com/login?ref=https%3A%2F%2Fwww.groupon.com%2F" />
+    <invalid_http_status value="403" />
     <valid_password value="Sign Out" />
     <invalid_password value="Incorrect login. Try again or" />
     <valid_response_header value="just_logged_in=true" />

@@ -373,8 +373,8 @@ def populate_site(site, args):
             site_properties.multiple_params = True
             site_properties.multiple_params_url = _.attrib["value"]
             continue
-        if _.tag in ("custom_search", "time_parameter", "invalid_http_status",
-                     "custom_response_header"):
+        if _.tag in ("custom_search", "time_parameter", "valid_http_status",
+                     "invalid_http_status", "custom_response_header"):
             site_properties[_.tag] = _.attrib
             continue
         if "value" in _.attrib:
