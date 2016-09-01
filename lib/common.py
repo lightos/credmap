@@ -23,12 +23,12 @@ SOFTWARE.
 from os import name
 from cookielib import CookieJar
 
-from lib.settings import W, BW, R, G, O, B, P, C, GR
+from lib.settings import W, GR
 
-cookie_handler = CookieJar()
+COOKIE_HANDLER = CookieJar()
 
 
-def color(text, color=GR):
+def colorize(text, color=GR):
     """
     Sets the text to a given color if not running under Windows.
     """

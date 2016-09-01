@@ -27,7 +27,7 @@ from __future__ import print_function
 import re
 
 from time import strftime
-from xml.etree.ElementTree import parse
+from xml.etree.ElementTree import parse, ParseError
 from sys import stdout as sys_stdout
 from subprocess import Popen, PIPE
 from optparse import OptionParser
@@ -39,10 +39,10 @@ from urllib2 import build_opener, install_opener, ProxyHandler
 from urllib2 import HTTPCookieProcessor, HTTPHandler, HTTPSHandler, quote
 
 from lib.website import Website
-from lib.common import color, cookie_handler
+from lib.common import colorize as color, COOKIE_HANDLER as cookie_handler
 from lib.settings import BW
-from lib.settings import ASK, PLUS, INFO, TEST, WARN, ERROR, DEBUG
-from lib.logger import logger
+from lib.settings import ASK, PLUS, INFO, TEST, WARN, ERROR
+from lib.logger import Logger
 
 NAME = "credmap"
 VERSION = "v0.1"
@@ -99,14 +99,6 @@ Examples:
 """
 
 
-def print(*args, **kwargs):
-    """
-    Currently no purpose.
-    """
-
-    return __builtins__.print(*args, **kwargs)
-
-
 class AttribDict(dict):
     """
     Gets and Sets attributes for a dict.
@@ -116,6 +108,11 @@ class AttribDict(dict):
 
     def __setattr__(self, name, value):
         return self.__setitem__(name, value)
+
+    def __init__(self, *args, **kwargs):
+        self.multiple_params = None
+        self.multiple_params_url = None
+        dict.__init__(self, *args, **kwargs)
 
 
 def get_revision():
@@ -174,7 +171,6 @@ def check_revision(version):
     revision = get_revision()
 
     if revision:
-        _ = version
         version = "%s-%s" % (version, revision)
 
     return version
@@ -361,11 +357,11 @@ def populate_site(site, args):
 
     try:
         xml_tree = parse("%s/%s.xml" % (SITES_DIR, site)).getroot()
-    except Exception as e:
+    except ParseError as parse_error:
         print("%s parsing XML file \"%s\". Skipping..." % (ERROR,
-                                                             color(site, BW)))
+                                                           color(site, BW)))
         if args.verbose:
-            print("%s: %s" % (ERROR, e.message))
+            print("%s: %s" % (ERROR, parse_error.message))
         print()
 
         return
@@ -390,9 +386,9 @@ def populate_site(site, args):
         site_properties.multiple_params = []
         for _ in xml_tree.getiterator('param'):
             params = {}
-            for k, v in _.attrib.items():
-                if v:
-                    params[k] = v
+            for k, val in _.attrib.items():
+                if val:
+                    params[k] = val
             if params:
                 site_properties.multiple_params.append(params)
 
@@ -516,10 +512,13 @@ def main():
     if not exists(OUTPUT_DIR):
         makedirs(OUTPUT_DIR)
 
-    log = logger("%s/credmap" % OUTPUT_DIR)
+    log = Logger("%s/credmap" % OUTPUT_DIR)
     log.open()
 
     def get_targets():
+        """
+        Retrieve and yield list of sites (targets) for testing.
+        """
         for site in sites:
             _ = populate_site(site, args)
             if not _:
@@ -583,10 +582,10 @@ def main():
                       % (ERROR, color(args.cred_format, BW)))
                 exit()
 
-            cred_format = [_.replace("e", "email")
+            cred_format = [v.replace("e", "email")
                            .replace("u", "username")
                            .replace("p", "password")
-                           for _ in cred_format.groups() if _ is not None]
+                           for v in cred_format.groups() if v is not None]
 
         with open(args.load_file, "r") as load_list:
             for user in load_list:
@@ -597,10 +596,10 @@ def main():
                     credentials = dict(zip(cred_format, match.groups()))
                     credentials["password"] = quote(
                         credentials["password"])
-                    if "email" in credentials and not re.match(
-                        r"^[A-Za-z0-9._%+-]+@(?:[A-Z"
-                        r"a-z0-9-]+\.)+[A-Za-z]{2,12}$",
-                            credentials["email"]):
+                    if("email" in credentials and
+                       not re.match(r"^[A-Za-z0-9._%+-]+@(?:[A-Z"
+                                    r"a-z0-9-]+\.)+[A-Za-z]{2,12}$",
+                                    credentials["email"])):
                         print("%s Specified e-mail \"%s\" does not appear "
                               "to be correct. Skipping...\n" % (WARN, color(
                                   credentials["email"], BW)))

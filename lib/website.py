@@ -24,11 +24,14 @@ from time import time
 from re import I, sub, search, escape
 from cookielib import Cookie
 from urllib import urlencode, unquote_plus
-from urllib2 import urlopen, Request, quote
+from urllib2 import urlopen, Request, quote, HTTPError
 from urlparse import urlsplit, urlunsplit, parse_qsl
+from StringIO import StringIO
+from gzip import GzipFile
 
-from .common import color
+from .common import colorize as color
 from .settings import PLUS, INFO, WARN, ERROR, DEBUG
+
 
 # Posible values in XML file
 XML_ELEMENTS = ("url", "name", "description", "login_url", "invalid_account",
@@ -50,6 +53,14 @@ class Website(object):
     Populates the Website object with data from the XML file.
     """
     def __init__(self, *data, **kwargs):
+        self.url = None
+        self.csrf_token = None
+        self.cookies = None
+        self.headers = None
+        self.data = None
+        self.response_status = None
+        self.response_headers = None
+
         for dictionary in data:
             for key in dictionary:
                 setattr(self, key, dictionary[key])
@@ -100,26 +111,22 @@ class Website(object):
             req = Request(self.url, self.data if data else None, headers)
             conn = urlopen(req)
 
-            if not page:
-                page = conn.read()
-
         except KeyboardInterrupt:
             raise
-
+        except HTTPError as error:
+            if(self.invalid_http_status and "*" not in
+               self.invalid_http_status["value"] and
+               error.code == int(self.invalid_http_status["value"])):
+                conn = error
+            elif(self.invalid_http_status and "*" in
+                 self.invalid_http_status["value"] and
+                 str(error.code)[0] == self.invalid_http_status["value"][0]):
+                conn = error
         except Exception, error:
             if hasattr(error, "read"):
-                page = page or error.read()
+                page = error.read()
 
-            if (hasattr(error, "code") and self.invalid_http_status and
-                    "*" not in self.invalid_http_status["value"] and
-                    error.code == int(self.invalid_http_status["value"])):
-                pass
-            elif (hasattr(error, "code") and self.invalid_http_status and
-                    "*" in self.invalid_http_status["value"] and
-                    str(error.code)[0] ==
-                    str(self.invalid_http_status["value"])[0]):
-                pass
-            elif self.verbose:
+            if self.verbose:
                 if hasattr(error, "msg"):
                     print("%s msg '%s'." % (ERROR, error.msg))
                 if hasattr(error, "reason"):
@@ -128,6 +135,12 @@ class Website(object):
                     print("%s message '%s'." % (ERROR, error.message))
                 if hasattr(error, "code"):
                     print("%s error code '%d'." % (ERROR, error.code))
+
+        if not page and conn and conn.info().get('Content-Encoding') == 'gzip':
+            page = GzipFile(fileobj=StringIO(conn.read())).read()
+
+        if not page and conn:
+            page = conn.read()
 
         # NEED TO CLEAN THIS WHOLE PART UP
         self.status["status"] = 1 if conn else 0
@@ -142,8 +155,9 @@ class Website(object):
                                 hasattr(error, "code") else "Unknown code!")
 
         if self.verbose >= 2:
-            print("%s RESPONSE\n%s" % (DEBUG, self.response_headers))
-
+            print("%s RESPONSE\nSTATUS CODE: %s\n%s" % (DEBUG,
+                                                        self.response_status,
+                                                        self.response_headers))
         if self.verbose >= 3:
             print("%s HTML\n%s" % (DEBUG, page))
 
@@ -180,9 +194,9 @@ class Website(object):
             csrf_response = self.get_page()
 
             if not csrf_response:
-                if (self.invalid_http_status and self.response_status and
-                    int(self.invalid_http_status["value"]) == int(
-                        self.response_status)):
+                if(self.invalid_http_status and self.response_status and
+                   int(self.invalid_http_status["value"]) == int(
+                       self.response_status)):
                     if("msg" in self.invalid_http_status and self.verbose):
                         print("%s %s\n" %
                               (INFO, self.invalid_http_status["msg"] if "msg"
@@ -237,7 +251,7 @@ class Website(object):
                            (str(param).encode('string-escape'),
                             str(value).encode('string-escape')), string)
 
-        if self.multiple_params:
+        if(self.multiple_params):
             multiple_params_response = ""
             if(self.csrf_token_name and
                self.csrf_url == self.multiple_params_url):
@@ -246,9 +260,9 @@ class Website(object):
                 self.url = self.multiple_params_url
                 multiple_params_response = self.get_page()
 
-            if (self.invalid_http_status and self.response_status and
-                int(self.invalid_http_status["value"]) == int(
-                    self.response_status)):
+            if(self.invalid_http_status and self.response_status and
+               int(self.invalid_http_status["value"]) == int(
+                   self.response_status)):
                 if("msg" in self.invalid_http_status and self.verbose):
                     print("%s %s\n" %
                           (INFO, self.invalid_http_status["msg"] if "msg"
