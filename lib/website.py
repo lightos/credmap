@@ -233,7 +233,7 @@ class Website(object):
 
             if self.status["msg"] == "No token" or not self.csrf_token:
                 if self.verbose:
-                    print "%s CSRF token not found. Skipping page...\n" % WARN
+                    print "%s CSRF token not found. Skipping site...\n" % WARN
                 return
 
             if self.verbose:
@@ -277,7 +277,7 @@ class Website(object):
 
             if not multiple_params_response:
                 print("%s problem receiving HTTP response while fetching "
-                      "params! Skipping to next site...\n" % ERROR)
+                      "params! Skipping site...\n" % ERROR)
                 return
 
             for _ in self.multiple_params:
@@ -373,8 +373,7 @@ class Website(object):
 
         if not login_response:
             if self.verbose:
-                print("%s no response received! "
-                      "Skipping to next site...\n" % WARN)
+                print("%s no response received! Skipping site...\n" % WARN)
             return False
 
         if self.login_redirect:
@@ -395,7 +394,7 @@ class Website(object):
         if not login_response:
             if self.verbose:
                 print("%s no response received during login redirect! "
-                      "Skipping to next site...\n" % WARN)
+                      "Skipping site...\n" % WARN)
             return False
 
         # The code for these IF checks need to be cleaned up
@@ -415,7 +414,7 @@ class Website(object):
         # If captcha flag is set and found in login response
         if self.captcha_flag and self.captcha_flag in login_response:
             if self.verbose:
-                print "%s captcha detected! Skipping to next site...\n" % WARN
+                print "%s captcha detected! Skipping site...\n" % WARN
             return False
         # If custom search is set and found in response
         elif self.custom_search and search(self.custom_search['regex'],
@@ -486,7 +485,7 @@ class Website(object):
         # Unhandled case
         else:
             if self.verbose:
-                print "%s Unable to login! Skipping to next site...\n" % WARN
+                print "%s Unable to login! Skipping site...\n" % WARN
             return False
 
 
