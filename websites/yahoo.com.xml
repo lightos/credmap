@@ -13,6 +13,6 @@
     <password_parameter value="passwd" />
     <csrf_token_name value="_crumb" />
     <csrf_url value="https://login.yahoo.com/config/login" />
-    <csrf_regex value="name=&quot;_crumb&quot;\stype=&quot;hidden&quot;\svalue=&quot;(?P&lt;token&gt;.{11})&quot;&gt;" />
+    <csrf_regex value="name=&quot;_crumb&quot;\stype=&quot;hidden&quot;\svalue=&quot;(?P&lt;token&gt;[^&quot;]+)&quot;&gt;" />
     <data value="countrycode=&amp;username=&amp;passwd=&amp;signin=&amp;_crumb=&amp;_format=json&amp;_seqid=3&amp;otp_channel=&amp;_loadtpl=1" />
 </properties>
