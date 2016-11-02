@@ -2,7 +2,7 @@
     <name value="Vimeo" />
     <description value="A video-sharing website in which users can upload, share and view videos." />
     <login_url value="https://vimeo.com/log_in?ssl=0&amp;iframe=0&amp;popup=0&amp;player=0&amp;product_id=0" />
-    <valid_password value="{&quot;logged_in&quot;:&quot;true&quot;,&quot;token&quot;:&quot;" />
+    <valid_password value="{&quot;logged_in&quot;:true,&quot;token&quot;:&quot;" />
     <invalid_http_status value="418" />
     <headers value="X-Requested-With=XMLHttpRequest\nReferer=https://vimeo.com/log_in" />
     <username_or_email value="email" />

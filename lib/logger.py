@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Hypsurus <hypsurus@mail.ru>.
+Copyright (c) 2015-2016 Hypsurus <hypsurus@mail.ru>.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"),
@@ -23,24 +23,23 @@ SOFTWARE.
 from time import strftime
 
 
-class logger(object):
+class Logger(object):
     """ Log text into a file """
     def __init__(self, logger_file):
         self.cursor = None
         self.logger_file = logger_file
 
     def open(self):
-        """ Will keep it open until calling logger.close() """
-        self.cursor = open("%s_%s.log" % (self.logger_file,
-                                          strftime("%H_%M_%S")), "w")
+        """ Will keep it open until calling logger.close()
+            using 1 log file, to log all data"""
+        self.cursor = open("%s.log" % (self.logger_file), "a")
 
     def write(self, data):
         """ Write to the log file """
         self.cursor.write("[%s] %s" % (strftime("%H:%M:%S"), data))
 
     def close(self):
-        """ Here we close the log file for good!
-            and we cannot write to it again!  """
+        """ Here we close the log file,
+         and we can write to it again."""
         if self.cursor:
             self.cursor.close()
-

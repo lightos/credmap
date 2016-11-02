@@ -10,8 +10,8 @@
     <username_or_email value="username" />
     <login_parameter value="wpName" />
     <password_parameter value="wpPassword" />
-    <csrf_token_name value="wpLoginToken" />
-    <csrf_url value="https://en.wikipedia.org/w/index.php?title=Special:UserLogin&amp;returnto=Main+Page&amp;returntoquery=gettingStartedReturn%3Dtrue" />
-    <csrf_regex value="value=&quot;(?P&lt;token&gt;[^&quot;]{42})&quot;\sname=&quot;wpLoginToken&quot;" />
-    <data value="wpName=&amp;wpPassword=&amp;wpLoginAttempt=Log+in&amp;wpLoginToken=&amp;wpForceHttps=1&amp;wpFromhttp=" />
+    <multiple_params value="https://en.wikipedia.org/w/index.php?title=Special:UserLogin&amp;returnto=Main+Page">
+        <param value="wpLoginToken" />
+    </multiple_params>
+    <data value="wpName=&amp;wpPassword=&amp;wpLoginAttempt=Log+in&amp;wpEditToken=%2B%5C&amp;title=Special%3AUserLogin&amp;authAction=login&amp;force=&amp;wpLoginToken=&amp;wpForceHttps=1&amp;wpFromhttp=" />
 </properties>

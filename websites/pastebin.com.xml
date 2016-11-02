@@ -9,7 +9,7 @@
     <username_or_email value="username" />
     <login_parameter value="user_name" />
     <password_parameter value="user_password" />
-	<csrf_setcookie_regex value="__cfduid=(?P&lt;token&gt;[a-z0-9]{43}" />
+    <csrf_setcookie value="__cfduid=(?P&lt;token&gt;[a-z0-9]{43})" />
     <data value="csrf_token_login=&amp;submit_hidden=submit_hidden&amp;user_name=&amp;user_password=&amp;submit=Login" />
     <multiple_params value="http://pastebin.com/login.php">
         <param value="csrf_token_login" type="data" />

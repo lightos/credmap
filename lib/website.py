@@ -23,18 +23,21 @@ SOFTWARE.
 from time import time
 from re import I, sub, search, escape
 from cookielib import Cookie
-from urllib import urlencode
-from urllib2 import urlopen, Request, quote
+from urllib import urlencode, unquote_plus
+from urllib2 import urlopen, Request, quote, HTTPError
 from urlparse import urlsplit, urlunsplit, parse_qsl
+from StringIO import StringIO
+from gzip import GzipFile
 
-from .common import color
+from .common import colorize as color
 from .settings import PLUS, INFO, WARN, ERROR, DEBUG
+
 
 # Posible values in XML file
 XML_ELEMENTS = ("url", "name", "description", "login_url", "invalid_account",
                 "inactive_account", "valid_password", "invalid_password",
                 "valid_response_header", "valid_response_header_type",
-                "response_headers", "invalid_http_status", "headers", "data",
+                "response_headers", "valid_http_status", "headers", "data",
                 "cookies", "user_agent", "username_or_email", "custom_search",
                 "login_parameter", "login_parameter_type", "multiple_params",
                 "password_parameter", "password_parameter_type", "status",
@@ -42,7 +45,7 @@ XML_ELEMENTS = ("url", "name", "description", "login_url", "invalid_account",
                 "csrf_regex", "csrf_end", "captcha_flag", "email_exception",
                 "multiple_params_url", "custom_response_header", "csrf_token",
                 "response_status", "login_redirect", "login_redirect_type",
-                "time_parameter")
+                "time_parameter", "invalid_http_status")
 
 
 class Website(object):
@@ -50,6 +53,14 @@ class Website(object):
     Populates the Website object with data from the XML file.
     """
     def __init__(self, *data, **kwargs):
+        self.url = None
+        self.csrf_token = None
+        self.cookies = None
+        self.headers = None
+        self.data = None
+        self.response_status = None
+        self.response_headers = None
+
         for dictionary in data:
             for key in dictionary:
                 setattr(self, key, dictionary[key])
@@ -71,6 +82,7 @@ class Website(object):
         parsed_url = None
         page = None
         conn = None
+        invalid = False
 
         parsed_url = urlsplit(self.url)
 
@@ -78,8 +90,11 @@ class Website(object):
             parsed_url = parsed_url._replace(
                 query=urlencode(parse_qsl(parsed_url.query)))
             self.url = urlunsplit(parsed_url)
+        elif self.login_parameter_type == "json":
+            self.data = unquote_plus(self.data)
         else:
-            self.data = urlencode(parse_qsl(self.data, 1), "POST")
+            self.data = urlencode(parse_qsl(
+                self.data.replace("+", "%2B"), 1), "POST")
 
         try:
             headers["User-agent"] = self.user_agent
@@ -89,38 +104,48 @@ class Website(object):
                                      for _ in self.headers.split("\\n")]))
 
             if self.verbose >= 2:
-                print("%s REQUEST\nURL: %s\n%sHeaders: %s\n" % (DEBUG,
-                                                                self.url,
-                                                                "DATA: %s\n" %
-                                                                self.data
-                                                                if data else
-                                                                "", headers))
+                print("%s REQUEST\nURL: "
+                      "%s\n%sHeaders: %s\n" % (DEBUG, self.url, "DATA: %s\n" %
+                                               self.data if data else "",
+                                               headers))
 
             req = Request(self.url, self.data if data else None, headers)
             conn = urlopen(req)
 
-            if not page:
-                page = conn.read()
-
         except KeyboardInterrupt:
             raise
-
+        except HTTPError as error:
+            conn = error
+            if(self.valid_http_status and "*" not in
+               self.valid_http_status["value"] and
+               error.code == int(self.valid_http_status["value"])):
+                pass
+            elif(self.valid_http_status and "*" in
+                 self.valid_http_status["value"] and
+                 str(error.code)[0] == self.valid_http_status["value"][0]):
+                pass
+            if(self.invalid_http_status and "*" not in
+               self.invalid_http_status["value"] and
+               error.code == int(self.invalid_http_status["value"])):
+                invalid = True
+            elif(self.invalid_http_status and "*" in
+                 self.invalid_http_status["value"] and
+                 str(error.code)[0] == self.invalid_http_status["value"][0]):
+                invalid = True
+            else:
+                if self.verbose:
+                    print_http_error(error)
         except Exception, error:
             if hasattr(error, "read"):
-                page = page or error.read()
+                page = error.read()
+            if self.verbose:
+                print_http_error(error)
 
-            if (hasattr(error, "code") and self.invalid_http_status and
-                    error.code == int(self.invalid_http_status["value"])):
-                pass
-            elif self.verbose:
-                if hasattr(error, "msg"):
-                    print("%s msg '%s'." % (ERROR, error.msg))
-                if hasattr(error, "reason"):
-                    print("%s reason '%s'." % (ERROR, error.reason))
-                if getattr(error, "message"):
-                    print("%s message '%s'." % (ERROR, error.message))
-                if hasattr(error, "code"):
-                    print("%s error code '%d'." % (ERROR, error.code))
+        if not page and conn and conn.info().get('Content-Encoding') == 'gzip':
+            page = GzipFile(fileobj=StringIO(conn.read())).read()
+
+        if not page and conn:
+            page = conn.read()
 
         # NEED TO CLEAN THIS WHOLE PART UP
         self.status["status"] = 1 if conn else 0
@@ -135,10 +160,13 @@ class Website(object):
                                 hasattr(error, "code") else "Unknown code!")
 
         if self.verbose >= 2:
-            print("%s RESPONSE\n%s" % (DEBUG, self.response_headers))
-
+            print("%s RESPONSE\nSTATUS CODE: %s\n%s" % (DEBUG,
+                                                        self.response_status,
+                                                        self.response_headers))
         if self.verbose >= 3:
-            print("%s HTML\n%s" % (DEBUG, page))
+            print "%s HTML\n%s" % (DEBUG, page or "No reponse")
+        if invalid:
+            page = None
 
         return page
 
@@ -173,7 +201,15 @@ class Website(object):
             csrf_response = self.get_page()
 
             if not csrf_response:
-                if self.verbose:
+                if(self.invalid_http_status and self.response_status and
+                   int(self.invalid_http_status["value"]) == int(
+                       self.response_status)):
+                    if self.verbose:
+                        print("%s %s\n" %
+                              (INFO, self.invalid_http_status["msg"] if "msg"
+                               in self.invalid_http_status else
+                               "Your IP may have been blocked..."))
+                elif self.verbose:
                     print("%s problem receiving HTTP response "
                           "while fetching token!\n" % ERROR)
                 return
@@ -197,7 +233,7 @@ class Website(object):
 
             if self.status["msg"] == "No token" or not self.csrf_token:
                 if self.verbose:
-                    print("%s CSRF token not found. Skipping page...\n" % WARN)
+                    print "%s CSRF token not found. Skipping site...\n" % WARN
                 return
 
             if self.verbose:
@@ -209,15 +245,18 @@ class Website(object):
             Replace data in parameters with given string.
             Parameter format can be json or normal POST data.
             """
+
             if param_format == "json":
                 return sub(r"(?P<json_replacement>\"%s\"\s*:\s*)\"\s*\"" %
-                           escape(param), "\\1\"%s\"" % value, string)
+                           escape(str(param)), "\\1\"%s\"" % value, string)
             elif param_format == "header":
-                return sub(r"%s=[^\\n]*" % escape(param),
-                           "%s=%s" % (param, value), string)
+                return sub(r"%s=[^\\n]*" % escape(str(param)), r"%s=%s" %
+                           (str(param).encode('string-escape'),
+                            str(value).encode('string-escape')), string)
             else:
-                return sub(r"%s=[^&]*" % escape(param),
-                           "%s=%s" % (param, value), string)
+                return sub(r"%s=[^&]*" % escape(str(param)), r"%s=%s" %
+                           (str(param).encode('string-escape'),
+                            str(value).encode('string-escape')), string)
 
         if self.multiple_params:
             multiple_params_response = ""
@@ -228,22 +267,31 @@ class Website(object):
                 self.url = self.multiple_params_url
                 multiple_params_response = self.get_page()
 
+            if(self.invalid_http_status and self.response_status and
+               int(self.invalid_http_status["value"]) == int(
+                   self.response_status) and self.verbose):
+                print("%s %s\n" % (INFO, self.invalid_http_status["msg"]
+                                   if "msg" in self.invalid_http_status else
+                                   "Your IP may have been blocked..."))
+                return
+
             if not multiple_params_response:
                 print("%s problem receiving HTTP response while fetching "
-                      "params! Skipping to next site...\n" % ERROR)
+                      "params! Skipping site...\n" % ERROR)
                 return
 
             for _ in self.multiple_params:
                 regex = (_["regex"] if "regex" in _ else
-                         r"<\w+\s*(\s*\w+\s*=\"[^\"]*\")*\s*name="
-                         r"\"%s\"\s*(\s*\w+\s*=\"[^\"]*\")*\s*/?>"
-                         % _["value"])
+                         r"<\w+[^>]*(value\s*=\s*\"[^\"]*\"|name\s*=\s*"
+                         r"\"?{0}(?:\"|\s))[^>]*(value\s*=\s*\"[^\"]*\""
+                         r"|name\s*=\s*\"?{0}(?:\"|\s))[^>]*>"
+                         .format(escape(_["value"])))
                 match = search(regex, multiple_params_response)
 
-                if not match:
+                if not match or "value" not in _:
                     if self.verbose:
                         print("%s no match for parameter \"%s\"! "
-                              "Skipping to next site...\n" %
+                              "Skipping site...\n" %
                               (WARN, color(_["value"])))
                         self.status = {"status": 0, "msg": "No token"}
                     return
@@ -307,7 +355,8 @@ class Website(object):
             if self.data:
                 self.data = replace_param(self.data,
                                           self.csrf_token_name,
-                                          self.csrf_token)
+                                          self.csrf_token,
+                                          self.login_parameter_type)
             if self.headers:
                 self.headers = replace_param(self.headers,
                                              self.csrf_token_name,
@@ -324,8 +373,7 @@ class Website(object):
 
         if not login_response:
             if self.verbose:
-                print("%s no response received! "
-                      "Skipping to next site...\n" % WARN)
+                print("%s no response received! Skipping site...\n" % WARN)
             return False
 
         if self.login_redirect:
@@ -346,15 +394,14 @@ class Website(object):
         if not login_response:
             if self.verbose:
                 print("%s no response received during login redirect! "
-                      "Skipping to next site...\n" % WARN)
+                      "Skipping site...\n" % WARN)
             return False
 
         # The code for these IF checks need to be cleaned up
-
         # If invalid credentials http status code is returned
-        if (self.invalid_http_status and self.response_status and
-                int(self.invalid_http_status["value"]) ==
-                int(self.response_status)):
+        elif (self.invalid_http_status and self.response_status and
+              str(self.invalid_http_status["value"]) ==
+              str(self.response_status)):
             if("msg" in self.invalid_http_status or not
                login_response.strip("[]")):
                 if self.verbose:
@@ -367,47 +414,47 @@ class Website(object):
         # If captcha flag is set and found in login response
         if self.captcha_flag and self.captcha_flag in login_response:
             if self.verbose:
-                print("%s captcha detected! Skipping to next site...\n" % WARN)
+                print "%s captcha detected! Skipping site...\n" % WARN
             return False
         # If custom search is set and found in response
         elif self.custom_search and search(self.custom_search['regex'],
                                            login_response):
             if self.verbose:
-                print("%s %s\n" % (INFO, self.custom_search["value"]))
+                print "%s %s\n" % (INFO, self.custom_search["value"])
             return False
         # Valid password string in response
         elif self.valid_password and self.valid_password in login_response:
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
+            print "%s Credentials worked! Successfully logged in.\n" % PLUS
             return True
         # Valid response header type REGEX
         elif (self.valid_response_header and
               self.valid_response_header_type == "regex" and
               search(self.valid_response_header,
                      str(self.response_headers))):
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
+            print "%s Credentials worked! Successfully logged in.\n" % PLUS
             return True
         # Valid response header for cookies type REGEX
         elif (self.valid_response_header and
               self.valid_response_header_type == "regex" and
               search(self.valid_response_header, str(cookie_handler))):
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
+            print "%s Credentials worked! Successfully logged in.\n" % PLUS
             return True
         # Valid response header type normal
         elif (self.valid_response_header and self.valid_response_header
               in str(self.response_headers)):
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
+            print "%s Credentials worked! Successfully logged in.\n" % PLUS
             return True
         # Valid response header for cookies type normal
         elif (self.valid_response_header and self.valid_response_header
               in str(cookie_handler)):
-            print("%s Credentials worked! Successfully logged in.\n" % PLUS)
+            print "%s Credentials worked! Successfully logged in.\n" % PLUS
             return True
         # Custom message when specified invalid header is detected
         elif (self.custom_response_header and
               self.custom_response_header["value"] in
               str(self.response_headers)):
             if self.verbose:
-                print("%s %s" % (INFO, self.custom_response_header["msg"]))
+                print "%s %s" % (INFO, self.custom_response_header["msg"])
             return False
         # Invalid account string found in login response
         elif self.invalid_account and self.invalid_account in login_response:
@@ -438,5 +485,17 @@ class Website(object):
         # Unhandled case
         else:
             if self.verbose:
-                print("%s Unable to login! Skipping to next site...\n" % WARN)
+                print "%s Unable to login! Skipping site...\n" % WARN
             return False
+
+
+def print_http_error(error):
+    """Prints the HTTP Response error"""
+    if hasattr(error, "msg"):
+        print "%s msg '%s'." % (ERROR, error.msg)
+    if hasattr(error, "reason"):
+        print "%s reason '%s'." % (ERROR, error.reason)
+    if getattr(error, "message"):
+        print "%s message '%s'." % (ERROR, error.message)
+    if hasattr(error, "code"):
+        print "%s error code '%d'." % (ERROR, error.code)

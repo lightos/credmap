@@ -27,7 +27,7 @@ from __future__ import print_function
 import re
 
 from time import strftime
-from xml.etree.ElementTree import parse
+from xml.etree.ElementTree import parse, ParseError
 from sys import stdout as sys_stdout
 from subprocess import Popen, PIPE
 from optparse import OptionParser
@@ -36,13 +36,13 @@ from random import sample
 from os import listdir, makedirs
 from os.path import isfile, join, dirname, exists
 from urllib2 import build_opener, install_opener, ProxyHandler
-from urllib2 import HTTPCookieProcessor, HTTPHandler, HTTPSHandler
+from urllib2 import HTTPCookieProcessor, HTTPHandler, HTTPSHandler, quote
 
 from lib.website import Website
-from lib.common import color, cookie_handler
+from lib.common import colorize as color, COOKIE_HANDLER as cookie_handler
 from lib.settings import BW
-from lib.settings import ASK, PLUS, INFO, TEST, WARN, ERROR, DEBUG
-from lib.logger import logger
+from lib.settings import ASK, PLUS, INFO, TEST, WARN, ERROR
+from lib.logger import Logger
 
 NAME = "credmap"
 VERSION = "v0.1"
@@ -92,17 +92,11 @@ Examples:
 ./credmap.py -u johndoe -e johndoe@email.com --exclude "github.com, live.com"
 ./credmap.py -u johndoe -p abc123 -vvv --only "linkedin.com, facebook.com"
 ./credmap.py -e janedoe@example.com --verbose --proxy "https://127.0.0.1:8080"
-./credmap.py --load list.txt
+./credmap.py --load creds.txt --format "e.u.p"
+./credmap.py -l creds.txt -f "u|e:p"
+./credmap.py -l creds.txt
 ./credmap.py --list
 """
-
-
-def print(*args, **kwargs):
-    """
-    Currently no purpose.
-    """
-
-    return __builtins__.print(*args, **kwargs)
 
 
 class AttribDict(dict):
@@ -114,6 +108,11 @@ class AttribDict(dict):
 
     def __setattr__(self, name, value):
         return self.__setitem__(name, value)
+
+    def __init__(self, *args, **kwargs):
+        self.multiple_params = None
+        self.multiple_params_url = None
+        dict.__init__(self, *args, **kwargs)
 
 
 def get_revision():
@@ -172,7 +171,6 @@ def check_revision(version):
     revision = get_revision()
 
     if revision:
-        _ = version
         version = "%s-%s" % (version, revision)
 
     return version
@@ -294,6 +292,9 @@ def parse_args():
     parser.add_option("-l", "--load", dest="load_file",
                       help="load list of credentials in format USER:PASSWORD")
 
+    parser.add_option("-f", "--format", dest="cred_format",
+                      help="format to use when reading from file (e.g. u|e:p)")
+
     parser.add_option("-x", "--exclude", dest="exclude",
                       help="exclude sites from testing")
 
@@ -302,7 +303,7 @@ def parse_args():
 
     parser.add_option("-s", "--safe-urls", dest="safe_urls",
                       action="store_true",
-                      help="only test sites that use HTTPS.")
+                      help="only test sites that use HTTPS")
 
     parser.add_option("-i", "--ignore-proxy", dest="ignore_proxy",
                       action="store_true",
@@ -356,9 +357,13 @@ def populate_site(site, args):
 
     try:
         xml_tree = parse("%s/%s.xml" % (SITES_DIR, site)).getroot()
-    except Exception:
-        print("%s parsing XML file \"%s\". Skipping...\n" % (ERROR,
-                                                             color(site, BW)))
+    except ParseError as parse_error:
+        print("%s parsing XML file \"%s\". Skipping..." % (ERROR,
+                                                           color(site, BW)))
+        if args.verbose:
+            print("%s: %s" % (ERROR, parse_error.message))
+        print()
+
         return
 
     site_properties = AttribDict()
@@ -368,8 +373,8 @@ def populate_site(site, args):
             site_properties.multiple_params = True
             site_properties.multiple_params_url = _.attrib["value"]
             continue
-        if _.tag in ("custom_search", "time_parameter", "invalid_http_status",
-                     "custom_response_header"):
+        if _.tag in ("custom_search", "time_parameter", "valid_http_status",
+                     "invalid_http_status", "custom_response_header"):
             site_properties[_.tag] = _.attrib
             continue
         if "value" in _.attrib:
@@ -381,9 +386,9 @@ def populate_site(site, args):
         site_properties.multiple_params = []
         for _ in xml_tree.getiterator('param'):
             params = {}
-            for k, v in _.attrib.items():
-                if v:
-                    params[k] = v
+            for k, val in _.attrib.items():
+                if val:
+                    params[k] = val
             if params:
                 site_properties.multiple_params.append(params)
 
@@ -431,8 +436,9 @@ def main():
         update()
         exit()
 
+    sites = list_sites()
+
     if args.list:
-        sites = list_sites()
         for _ in sites:
             print("- %s" % _)
         exit()
@@ -478,10 +484,6 @@ def main():
     with open(USER_AGENTS_FILE, 'r') as ua_file:
         args.user_agent = sample(ua_file.readlines(), 1)[0].strip()
 
-    credentials = {"username": args.username, "email": args.email,
-                   "password": args.password}
-    sites = list_sites()
-
     if args.only:
         sites = [site for site in sites if site in args.only]
     elif args.exclude:
@@ -510,73 +512,123 @@ def main():
     if not exists(OUTPUT_DIR):
         makedirs(OUTPUT_DIR)
 
-    log = logger("%s/results" % OUTPUT_DIR)
+    log = Logger("%s/credmap" % OUTPUT_DIR)
     log.open()
 
-    for site in sites:
-        _ = populate_site(site, args)
-        if not _:
-            continue
-        target = Website(_, {"verbose": args.verbose})
+    def get_targets():
+        """
+        Retrieve and yield list of sites (targets) for testing.
+        """
+        for site in sites:
+            _ = populate_site(site, args)
+            if not _:
+                continue
+            target = Website(_, {"verbose": args.verbose})
 
-        if not target.user_agent:
-            target.user_agent = args.user_agent
+            if not target.user_agent:
+                target.user_agent = args.user_agent
 
-        def login():
-            """
-            Verify credentials for login and check if login was successful.
-            """
-            if(target.username_or_email == "email" and not
-               credentials["email"] or
-               target.username_or_email == "username" and not
-               credentials["username"]):
-                if args.verbose:
-                    print("%s Skipping %s\"%s\" since "
-                          "no \"%s\" was specified.\n" %
-                          (INFO, "[%s:%s] on " %
-                           (credentials["username"] or
-                            credentials["email"], credentials["password"]) if
-                           args.load_file else "", color(target.name),
-                           color(target.username_or_email, BW)))
-                    login_skipped.append(target.name)
-                return
+            yield target
 
-            print("%s Testing %s\"%s\"..." %
-                  (TEST, "[%s:%s] on " % (credentials["username"] or
-                                          credentials["email"],
-                                          credentials["password"]) if
-                   args.load_file else "", color(target.name, BW)))
+    def login():
+        """
+        Verify credentials for login and check if login was successful.
+        """
+        if(target.username_or_email == "email" and not
+           credentials["email"] or
+           target.username_or_email == "username" and not
+           credentials["username"]):
+            if args.verbose:
+                print("%s Skipping %s\"%s\" since "
+                      "no \"%s\" was specified.\n" %
+                      (INFO, "[%s:%s] on " %
+                       (credentials["username"] or
+                        credentials["email"], credentials["password"]) if
+                       args.load_file else "", color(target.name),
+                       color(target.username_or_email, BW)))
+                login_skipped.append(target.name)
+            return
 
-            cookie_handler.clear()
+        print("%s Testing %s\"%s\"..." %
+              (TEST, "[%s:%s] on " % (credentials["username"] or
+                                      credentials["email"],
+                                      credentials["password"]) if
+               args.load_file else "", color(target.name, BW)))
 
-            if target.perform_login(credentials, cookie_handler):
-                log.write(">>> %s - %s:%s\n" %
-                          (target.name, credentials["username"] or
-                           credentials["email"], credentials["password"]))
-                login_sucessful.append("%s%s" %
-                                       (target.name, " [%s:%s]" %
-                                        (credentials["username"] or
-                                         credentials["email"],
-                                         credentials["password"]) if
-                                        args.load_file else ""))
-            else:
-                login_failed.append(target.name)
+        cookie_handler.clear()
 
-        if args.load_file:
-            with open(args.load_file, "r") as load_list:
-                for user in load_list:
+        if target.perform_login(credentials, cookie_handler):
+            log.write(">>> %s - %s:%s\n" %
+                      (target.name, credentials["username"] or
+                       credentials["email"], credentials["password"]))
+            login_sucessful.append("%s%s" %
+                                   (target.name, " [%s:%s]" %
+                                    (credentials["username"] or
+                                     credentials["email"],
+                                     credentials["password"]) if
+                                    args.load_file else ""))
+        else:
+            login_failed.append(target.name)
+
+    if args.load_file:
+        if args.cred_format:
+            separators = [re.escape(args.cred_format[1]),
+                          re.escape(args.cred_format[3]) if
+                          len(args.cred_format) > 3 else "\n"]
+            cred_format = re.match(r"(u|e|p)[^upe](u|e|p)(?:[^upe](u|e|p))?",
+                                   args.cred_format)
+            if not cred_format:
+                print("%s Could not parse --format: \"%s\""
+                      % (ERROR, color(args.cred_format, BW)))
+                exit()
+
+            cred_format = [v.replace("e", "email")
+                           .replace("u", "username")
+                           .replace("p", "password")
+                           for v in cred_format.groups() if v is not None]
+
+        with open(args.load_file, "r") as load_list:
+            for user in load_list:
+                if args.cred_format:
+                    match = re.match(r"([^{0}]+){0}([^{1}]+)(?:{1}([^\n]+))?"
+                                     .format(separators[0], separators[1]),
+                                     user)
+                    credentials = dict(zip(cred_format, match.groups()))
+                    credentials["password"] = quote(
+                        credentials["password"])
+                    if("email" in credentials and
+                       not re.match(r"^[A-Za-z0-9._%+-]+@(?:[A-Z"
+                                    r"a-z0-9-]+\.)+[A-Za-z]{2,12}$",
+                                    credentials["email"])):
+                        print("%s Specified e-mail \"%s\" does not appear "
+                              "to be correct. Skipping...\n" % (WARN, color(
+                                  credentials["email"], BW)))
+                        continue
+
+                    if "email" not in credentials:
+                        credentials["email"] = None
+                    elif "username" not in credentials:
+                        credentials["username"] = None
+                else:
                     user = user.rstrip().split(":", 1)
                     if not user[0]:
+                        if args.verbose:
+                            print("%s Could not parse credentials: \"%s\"\n" %
+                                  (WARN, color(user, BW)))
                         continue
 
                     match = re.match(r"^[A-Za-z0-9._%+-]+@(?:[A-Z"
                                      r"a-z0-9-]+\.)+[A-Za-z]{2,12}$", user[0])
                     credentials = {"email": user[0] if match else None,
                                    "username": None if match else user[0],
-                                   "password": user[1]}
+                                   "password": quote(user[1])}
 
+                for target in get_targets():
                     login()
-        else:
+    else:
+        credentials = {"username": args.username, "email": args.email,
+                       "password": quote(args.password)}
+        for target in get_targets():
             login()
 
     log.close()
