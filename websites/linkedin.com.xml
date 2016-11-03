@@ -2,6 +2,7 @@
     <name value="Linkedin" />
     <description value="Social network for business professionals." />
     <login_url value="https://www.linkedin.com/uas/login-submit" />
+    <valid_password value="Sign-In Verification" />
     <invalid_password value="session_password-login-error&quot;&gt;Hmm, that&#39;s not the right password." />
     <invalid_account value="session_key-login-error&quot;&gt;Hmm, we don&#39;t recognize that email." />
     <valid_response_header value="li_at=" />
