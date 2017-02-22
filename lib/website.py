@@ -168,6 +168,9 @@ class Website(object):
         if invalid:
             page = None
 
+        if not page and not invalid:
+            page = " "
+
         return page
 
     def add_cookies(self, cookie_handler, cookies, url=None):
