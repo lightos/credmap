@@ -34,3 +34,12 @@ Credmap is an open source tool that was created to bring awareness to the danger
 
 ### Add new websites
 Adding new websites to be tested using credmap can be done by creating a new XML file in the websites/ folder. To view a list of all possible tags that can be used in the XML file, please refer to the [Wiki](https://github.com/lightos/credmap/wiki).
+
+### Docker
+Build and deploy with the following:
+```bash
+git clone https://github.com/lightos/credmap.git
+cd credmap
+docker build -t credmap .
+docker run -it credmap
+```
